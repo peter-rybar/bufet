@@ -7,16 +7,6 @@
       "name": "Peter Rybar",
       "email": "rybar@vectary.com",
       "url": ""
-    },
-    {
-      "name": "Peter Nosko",
-      "email": "nosko@vectary.com",
-      "url": ""
-    },
-    {
-      "name": "Ján Pernecký",
-      "email": "pernecky@vectary.com",
-      "url": ""
     }
   ],
   "private": true,
@@ -53,8 +43,6 @@
     "@types/assertion-error": "^1.0.30",
     "@types/chai": "^3.4.34",
     "@types/mocha": "^2.2.33",
-    "@types/stats": "^0.16.30",
-    "@types/three": "0.0.24",
     "chai": "^3.5.0",
     "karma": "^1.3.0",
     "karma-chai": "^0.1.0",
