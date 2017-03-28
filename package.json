@@ -22,7 +22,9 @@
     "test": "node ./node_modules/karma-cli/bin/karma start ./karma.conf.js --single-run",
     "test:watch": "node ./node_modules/karma-cli/bin/karma start ./karma.conf.js",
     "clean": "rimraf build; rimraf dist",
-    "clean:all": "npm run clean; rimraf node_modules; rimraf typings"
+    "clean:all": "npm run clean; rimraf node_modules; rimraf typings",
+    "server": "node server/app.js",
+    "server:watch": "nodemon --watch server --watch build/main --watch dist server/app.js"
   },
   "pre-commit": [
     "dist"
@@ -52,6 +54,7 @@
     "karma-phantomjs-launcher": "^1.0.2",
     "karma-requirejs": "^1.1.0",
     "mocha": "^3.1.2",
+    "nodemon": "^1.11.0",
     "pre-commit": "^1.1.3",
     "pre-push": "^0.1.1",
     "requirejs": "^2.3.2",
@@ -65,5 +68,7 @@
     "typescript": "2.0.10"
   },
   "dependencies": {
+    "body-parser": "^1.17.1",
+    "express": "^4.15.2"
   }
 }

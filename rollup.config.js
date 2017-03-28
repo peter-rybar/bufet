@@ -5,7 +5,7 @@ import replace from 'rollup-plugin-replace'
 const pkg = require('./package.json');
 
 export default {
-    entry: './src/main/main.ts',
+    entry: './src/main/index.ts',
     plugins: [
         typescript({
             typescript: require('typescript')
