@@ -8,12 +8,16 @@
             "es2016.array.include"
         ],
         "module": "umd",
-        "noImplicitAny": false,
-        "noImplicitReturns": false,
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": false,
+        "strictNullChecks": false,
         "declaration": false,
         "sourceMap": true,
         "inlineSourceMap": false,
-        "removeComments": false,
+        "removeComments": true,
         "outDir": "build"
     },
     "include": [

@@ -1,6 +1,6 @@
 import typescript from 'rollup-plugin-typescript';
 import replace from 'rollup-plugin-replace'
-// import uglify from 'rollup-plugin-uglify';
+import uglify from 'rollup-plugin-uglify';
 
 const pkg = require('./package.json');
 
@@ -12,8 +12,8 @@ export default {
         }),
         replace({
             '@VERSION@': pkg.version
-        })
-        // uglify()
+        }),
+        uglify()
     ],
     globals: {
         // 'jquery': 'jQuery'
