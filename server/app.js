@@ -28,9 +28,13 @@ var products = [
 ];
 
 app.get('/', function (req, res) {
-    console.log("req", req.params, req.query);
-    res.send('Hello World!')
+    res.sendFile(path.join(__dirname + '/../static/index.html'));
 });
+
+// app.get('/', function (req, res) {
+//     console.log("req", req.params, req.query);
+//     res.send('Hello World!')
+// });
 
 app.get('/products', function (req, res) {
     res.json({products: products});
@@ -55,10 +59,13 @@ app.get('/order/:id', function (req, res) {
     });
 });
 
-app.post('/order/:id', jsonParser, function (req, res) {
+var orderId = 0;
+app.post('/order', jsonParser, function (req, res) {
     console.log("order post", req.params, req.query, req.body);
+    const order = req.body;
+    order.id = orderId++;
     res.json({
-        order: products
+        order: order
     });
 });
 
@@ -67,6 +74,7 @@ app.use(express.static(path.join(__dirname, '../static')));
 app.use(express.static(path.join(__dirname, '../build/main')));
 app.use(express.static(path.join(__dirname, '../dist')));
 app.use('/node_modules', express.static(path.join(__dirname, '../node_modules')));
+app.use('/src', express.static(path.join(__dirname, '../src')));
 
 
 var port = 3000;
