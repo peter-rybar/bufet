@@ -86,13 +86,18 @@ export function jsonml(markup: Array<any>): HTMLElement {
         if (i === 0) {
             m.split(".").forEach((x: string, i: number) => {
                 if (i === 0) {
-                    e = document.createElement(x);
+                    x.split("#").forEach((x: string, i: number) => {
+                        if (i === 0) {
+                            e = document.createElement(x);
+                        } else {
+                            e.setAttribute("id", x);
+                        }
+                    });
                 } else {
                     e.classList.add(x);
                 }
             });
         } else {
-            console.log(m);
             if (m) {
                 switch (m.constructor) {
                     case Object:
@@ -100,6 +105,12 @@ export function jsonml(markup: Array<any>): HTMLElement {
                             if (m.hasOwnProperty(a)) {
                                 if (typeof m[a] === "function") {
                                     e.addEventListener(a, m[a]);
+                                } else if (a === "data") {
+                                    for (const d in m[a]) {
+                                        if (m[a].hasOwnProperty(d)) {
+                                            e.dataset[d] = m[a][d];
+                                        }
+                                    }
                                 } else {
                                     e.setAttribute(a, m[a]);
                                 }
@@ -109,8 +120,18 @@ export function jsonml(markup: Array<any>): HTMLElement {
                     case Array:
                         e.appendChild(jsonml(m));
                         break;
+                    case String:
+                        // e.appendChild(document.createTextNode(m));
+                        const d = document.createElement("div");
+                        d.innerHTML = m;
+                        e.appendChild(d.childNodes[0]);
+                        break;
                     default:
-                        e.appendChild(document.createTextNode(m));
+                        if (m.nodeType === 1) { // Node
+                            e.appendChild(m);
+                        } else {
+                            e.appendChild(document.createTextNode("" + m));
+                        }
                 }
             }
         }
@@ -161,8 +182,8 @@ export function removeEventListener(element: HTMLElement,
 
 export interface Widget {
     readonly name: string;
-    mount(element: HTMLElement): void;
-    umount(): void;
+    mount(element: HTMLElement): this;
+    umount(): this;
 }
 
 

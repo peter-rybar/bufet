@@ -43,12 +43,14 @@ class ProductWidget implements Widget {
         return this;
     }
 
-    mount(e: HTMLElement): void {
+    mount(e: HTMLElement): this {
         this._element = e;
         this._update();
+        return this;
     }
 
-    umount(): void {
+    umount(): this {
+        return this;
     }
 
     element(): HTMLElement {
