@@ -23,7 +23,7 @@
     "test:watch": "node ./node_modules/karma-cli/bin/karma start ./karma.conf.js",
     "clean": "rimraf build; rimraf dist",
     "clean:all": "npm run clean; rimraf node_modules; rimraf typings",
-    "server": "node server/app.js",
+    "server": "NODE_ENV=production node server/app.js",
     "server:watch": "nodemon --watch server --watch build/main --watch dist server/app.js"
   },
   "pre-commit": [

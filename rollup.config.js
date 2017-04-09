@@ -27,7 +27,7 @@ export default {
     external: Object.keys(pkg.dependencies),
     targets: [
         {
-            dest: './dist/' + pkg.name + '.js',
+            dest: './dist/index.js',
             // format: 'iife',
             format: 'umd',
             moduleName: pkg.name,
