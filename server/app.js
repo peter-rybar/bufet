@@ -86,6 +86,10 @@ if (process.env.NODE_ENV == 'production') {
 
 var port = 3000;
 var host = 'localhost';
+if (process.env.NODE_ENV == 'production') {
+    port = 3000;
+    host = '0.0.0.0';
+}
 
 var server = app.listen(port, host, function () {
     var host = server.address().address;
