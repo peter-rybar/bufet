@@ -14,6 +14,14 @@ export function select(selector: string, element?: HTMLElement): HTMLElement {
     return e.querySelector(selector) as HTMLElement;
 }
 
+export function append(element: HTMLElement, ...elements: HTMLElement[]): void {
+    elements.forEach(e => element.appendChild(e));
+}
+
+export function replace(oldElement: HTMLElement, newElement: HTMLElement): void {
+    oldElement.parentElement.replaceChild(newElement, oldElement);
+}
+
 export function remove(element: HTMLElement): void {
     element.parentElement.removeChild(element);
 }
@@ -121,10 +129,10 @@ export function jsonml(markup: Array<any>): HTMLElement {
                         e.appendChild(jsonml(m));
                         break;
                     case String:
-                        // e.appendChild(document.createTextNode(m));
-                        const d = document.createElement("div");
-                        d.innerHTML = m;
-                        e.appendChild(d.childNodes[0]);
+                        e.appendChild(document.createTextNode(m));
+                        // const d = document.createElement("div");
+                        // d.innerHTML = m;
+                        // e.appendChild(d.childNodes[0]);
                         break;
                     default:
                         if (m.nodeType === 1) { // Node
