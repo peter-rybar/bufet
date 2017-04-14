@@ -1,33 +1,14 @@
-## Numerous always-ignore items
-*.diff
-*.err
-*.log
-*.swp
-*.vi
-*~
-
-## OS or Editor folders
-*.sublime-workspace
-.DS_Store
-.cache
 .idea
 .vscode
 .project
 .settings
 .tmproj
 *.iml
-Thumbs.db
-desktop.ini
-nbproject
 
-## Folders to ignore
 node_modules
 typings
 dist
 build
 tmp
 
-## Files to ignore
 *.lock
-
-## TypeScript files to ignore

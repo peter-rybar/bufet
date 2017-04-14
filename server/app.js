@@ -1,6 +1,44 @@
 var express = require('express');
 var path = require('path');
 var bodyParser = require('body-parser');
+var basicAuth = require('express-basic-auth');
+var db = require('diskdb');
+
+var dbdir = __dirname + '/../db';
+db = db.connect(dbdir, ['users', 'products', 'orders']);
+if (!db.users.count()) {
+    db.users.save([
+        {
+            login: 'peter',
+            password: 'rybar',
+            name: 'Peter Rybar'
+        },
+        {
+            login: 'palo',
+            password: 'sovis',
+            name: 'Pavol Sovis'
+        }
+    ]);
+}
+if (!db.products.count()) {
+    db.products.save([
+        {
+            id: 'keksik',
+            title: 'Keksik',
+            price: 7.3,
+            count: 7
+            },
+        {
+            id: 'kolacik',
+            title: 'Kolacik',
+            price: 2.3,
+            count: 3
+        }
+    ]);
+}
+// var u = db.users.findOne({login: 'peter'});
+// console.log(u);
+
 
 var app = express();
 
@@ -12,20 +50,25 @@ var jsonParser = bodyParser.json();
 // var urlencodedParser = bodyParser.urlencoded({ extended: false });
 // app.use(urlencodedParser);
 
-var products = [
-    {
-        id: 'keksik',
-        title: 'Keksik',
-        price: 7.3,
-        count: 7
+app.use(basicAuth({
+    // users: {
+    //     'admin': 'rybar'
+    // },
+    authorizer: function (username, password) {
+        var user = db.users.findOne({login: username});
+        var auth = user && user.password === password;
+        console.log("auth: ", username, password, user);
+        return auth;
     },
-    {
-        id: 'keksik-1',
-        title: 'Keksik 1',
-        price: 2.3,
-        count: 3
-    }
-];
+    challenge: true,
+    realm: 'Imb4T3st4pp'
+    // unauthorizedResponse: function (req) {
+    //     return req.auth ?
+    //         ('Credentials ' + req.auth.user + ':' + req.auth.password + ' rejected') :
+    //         'No credentials provided'
+    // }
+}));
+
 
 app.get('/', function (req, res) {
     res.sendFile(path.join(__dirname + '/../static/index.html'));
@@ -37,16 +80,23 @@ app.get('/', function (req, res) {
 // });
 
 app.get('/products', function (req, res) {
-    res.json({products: products});
+    res.json({products: db.products.find()});
+});
+
+app.get('/user', function (req, res) {
+    if (req.auth) {
+        var user = db.users.findOne({login: req.auth.user})
+        res.json({user: {login: user.login, name: user.name}});
+    } else {
+        res.sendStatus(404); // Not Found
+    }
 });
 
 app.get('/product/:id', function (req, res) {
     console.log('product get', req.params, req.query);
-    p = products.filter(function (p) {
-        return p.id === req.params.id;
-    });
-    if (p.length === 1) {
-        res.json({product: p[0]});
+    var product = db.products.findOne({id: req.params.id});
+    if (product) {
+        res.json({product: product});
     } else {
         res.sendStatus(404); // Not Found
     }
@@ -54,19 +104,23 @@ app.get('/product/:id', function (req, res) {
 
 app.get('/order/:id', function (req, res) {
     console.log('order get', req.params, req.query);
-    res.json({
-        order: products
-    });
+    var order = db.products.findOne({id: req.params.id});
+    if (order) {
+        res.json({order: order});
+    } else {
+        res.sendStatus(404); // Not Found
+    }
 });
 
-var orderId = 0;
 app.post('/order', jsonParser, function (req, res) {
     console.log('order post', req.params, req.query, req.body);
-    const order = req.body;
-    order.id = orderId++;
-    res.json({
-        order: order
-    });
+    var order = JSON.stringify(req.body);
+    order = db.orders.save(order);
+    if (order) {
+        res.json({order: order});
+    } else {
+        res.sendStatus(404); // Not Found
+    }
 });
 
 
