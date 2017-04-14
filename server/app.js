@@ -5,34 +5,43 @@ var basicAuth = require('express-basic-auth');
 var db = require('diskdb');
 
 var dbdir = __dirname + '/../db';
-db = db.connect(dbdir, ['users', 'products', 'orders']);
+db = db.connect(dbdir, ['users', 'products'/*, 'orders'*/]);
 if (!db.users.count()) {
     db.users.save([
         {
-            login: 'peter',
-            password: 'rybar',
-            name: 'Peter Rybar'
+            login: 'rybar',
+            password: 'peter',
+            name: 'Peter Rybár'
         },
         {
-            login: 'palo',
-            password: 'sovis',
-            name: 'Pavol Sovis'
+            login: 'sovis',
+            password: 'pavol',
+            name: 'Pavol Soviš'
         }
     ]);
 }
 if (!db.products.count()) {
     db.products.save([
         {
-            id: 'keksik',
-            title: 'Keksik',
+            code: 'keksik',
+            title: 'Keksík',
+            description: 'Keksík chutný',
             price: 7.3,
             count: 7
-            },
+        },
         {
-            id: 'kolacik',
-            title: 'Kolacik',
+            code: 'kolacik',
+            title: 'Koláčik',
+            description: 'Koláčik skvelý',
             price: 2.3,
             count: 3
+        },
+        {
+            code: 'cokoladka',
+            title: 'Čokoládka',
+            description: 'Čokoládka sladká',
+            price: 1.2,
+            count: 5
         }
     ]);
 }
@@ -49,6 +58,9 @@ var jsonParser = bodyParser.json();
 // parse application/x-www-form-urlencoded
 // var urlencodedParser = bodyParser.urlencoded({ extended: false });
 // app.use(urlencodedParser);
+
+// var textParser = bodyParser.text();
+// app.use(textParser);
 
 app.use(basicAuth({
     // users: {
@@ -85,7 +97,7 @@ app.get('/products', function (req, res) {
 
 app.get('/user', function (req, res) {
     if (req.auth) {
-        var user = db.users.findOne({login: req.auth.user})
+        var user = db.users.findOne({login: req.auth.user});
         res.json({user: {login: user.login, name: user.name}});
     } else {
         res.sendStatus(404); // Not Found
@@ -102,11 +114,17 @@ app.get('/product/:id', function (req, res) {
     }
 });
 
-app.get('/order/:id', function (req, res) {
-    console.log('order get', req.params, req.query);
-    var order = db.products.findOne({id: req.params.id});
-    if (order) {
-        res.json({order: order});
+app.get('/orders', function (req, res) {
+    console.log('orders get', req.params, req.query, req.body);
+
+    var userOrdersCollection = 'orders_' + req.auth.user;
+    if (!(userOrdersCollection in db)) {
+        db.loadCollections([userOrdersCollection]);
+    }
+    var orders = db[userOrdersCollection].find();
+
+    if (orders) {
+        res.json({orders: orders});
     } else {
         res.sendStatus(404); // Not Found
     }
@@ -114,8 +132,26 @@ app.get('/order/:id', function (req, res) {
 
 app.post('/order', jsonParser, function (req, res) {
     console.log('order post', req.params, req.query, req.body);
-    var order = JSON.stringify(req.body);
-    order = db.orders.save(order);
+    var order = req.body;
+    // TODO check order posibiliti
+    order.timestamp = new Date().toISOString();
+
+    var userOrdersCollection = 'orders_' + req.auth.user;
+    if (!(userOrdersCollection in db)) {
+        db.loadCollections([userOrdersCollection]);
+    }
+    order = db[userOrdersCollection].save(order);
+
+    if (order) {
+        res.json({order: order});
+    } else {
+        res.sendStatus(404); // Not Found
+    }
+});
+
+app.get('/order/:id', function (req, res) {
+    console.log('order get', req.params, req.query);
+    var order = db.products.findOne({_id: req.params.id});
     if (order) {
         res.json({order: order});
     } else {

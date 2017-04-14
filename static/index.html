@@ -5,6 +5,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <meta name="author" content="Peter Rybar, pr.rybar@gmail.com" />
     <title>Bufet</title>
     <link rel="stylesheet" type="text/css" href="../node_modules/semantic-ui-css/semantic.min.css">
 </head>
@@ -15,28 +16,38 @@
         <a class="item active">
             Bufet
         </a>
-        <!--<a class="item">
-            Messages
+        <a class="item" href="#order">
+            Nákupný Košík
         </a>
-        <a class="item">
-            Friends
-        </a>-->
         <div class="right menu">
             <a class="ui item">
-                <em id="user"></em>
+                <span id="user"></span>
             </a>
         </div>
     </div>
-    <div class="ui container">
-        <h1>Products</h1>
-
+</div>
+<div class="ui container">
+    <div class="ui basic segment">
+        <h1>Produkty</h1>
         <products></products>
 
-        <h2>Orders</h2>
-
-        <orders></orders>
     </div>
-
+</div>
+<div class="ui container">
+    <div class="ui two column stackable grid container=">
+        <div class="column">
+            <div class="ui segment basic">
+                <h2 id="order">Nákupný Košík</h2>
+                <order></order>
+            </div>
+        </div>
+        <div class="column">
+            <div class="ui segment basic">
+                <h2>Sumár</h2>
+                <orders></orders>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script src="../node_modules/jquery/dist/jquery.min.js"></script>
