@@ -2,7 +2,7 @@
 
 import { HttpRequest } from "./prest/http";
 import {
-    Widget, html, select, jsonml, empty, append, remove
+    Widget, html, select, jsonml, empty, remove, append
 } from "./prest/dom";
 import { Signal } from "./prest/signal";
 
@@ -13,6 +13,7 @@ export const version: string = "@VERSION@";
 interface User {
     login: string;
     name: number;
+    role: string;
 }
 
 interface Product {
@@ -21,6 +22,7 @@ interface Product {
     description: string;
     price: number;
     count: number;
+    sold: number;
 }
 
 interface OrderItem {
@@ -39,16 +41,10 @@ interface Order {
 
 class ProductsWidget implements Widget {
 
-    readonly name: string;
-
     readonly sigOrderItem = new Signal<OrderItem>();
 
     private _element: HTMLElement;
     private _products: Product[] = [];
-
-    constructor(name: string = "") {
-        this.name = name;
-    }
 
     setProducts(products: Product[]): this {
         this._products = products;
@@ -116,8 +112,6 @@ class ProductsWidget implements Widget {
                                     ["div.header", product.title, " "],
                                     // ["div.meta", "novinka"],
                                     ["div.description", product.description]
-                                    // ["strong.price", product.price, " € "],
-                                    // ["em.count", product.count, " ks "]
                                 ],
                                 ["div.extra",
                                     ["strong.price", product.price.toFixed(2), " € "],
@@ -132,7 +126,7 @@ class ProductsWidget implements Widget {
                     })
                 ]);
             empty(this._element);
-            this._element.appendChild(el);
+            append(this._element, el);
         }
     }
 
@@ -140,16 +134,10 @@ class ProductsWidget implements Widget {
 
 class OrderWidget implements Widget {
 
-    readonly name: string;
-
     private _element: HTMLElement;
     private _orderItems: OrderItem[] = [];
 
     readonly sigOrder = new Signal<Order>();
-
-    constructor(name: string = "") {
-        this.name = name;
-    }
 
     orderDone(): this {
         this._orderItems.length = 0;
@@ -276,7 +264,55 @@ class OrderWidget implements Widget {
                 ]);
             // ($(this._element) as any).tablesort();
             empty(this._element);
-            this._element.appendChild(el);
+            append(this._element, el);
+        }
+    }
+
+}
+
+
+class OrdersStatsWidget implements Widget {
+
+    private _element: HTMLElement;
+    private _orders: Order[] = [];
+
+    setOrders(orders: Order[]): this {
+        this._orders = orders;
+        this._update();
+        return this;
+    }
+
+    mount(e: HTMLElement): this {
+        this._element = e;
+        this._update();
+        return this;
+    }
+
+    umount(): this {
+        return this;
+    }
+
+    private _update(): void {
+        if (this._element) {
+            const orders = this._orders;
+            const sum = orders.map(o => o.price).reduce((sum, price) => sum + price, 0);
+            const count = orders.map(o => o.count).reduce((sum, count) => sum + count, 0);
+            const stat = `
+                <div class="ui statistics small">
+                    <div class="statistic blue">
+                        <div class="value">${orders.length}</div>
+                        <div class="label">Objednávky</div>
+                    </div>
+                    <div class="statistic green">
+                        <div class="value">${count}</div>
+                        <div class="label">Produkty</div>
+                    </div>
+                    <div class="statistic red">
+                        <div class="value">${sum.toFixed(2)} €</div>
+                        <div class="label">Celková cena</div>
+                    </div>
+                </div>`;
+            this._element.innerHTML = stat;
         }
     }
 
@@ -368,10 +404,13 @@ const ordersWidget = new OrderWidget()
             console.log(order);
             ordersWidget.orderDone();
             ordersWidget.message();
-            updateStats();
+            server.ordersGet(orders => ordersStatsWidget.setOrders(orders));
         });
     })
     .mount(select("order"));
+
+const ordersStatsWidget = new OrdersStatsWidget()
+    .mount(select("orders"));
 
 
 server.productsGet(products => {
@@ -379,42 +418,12 @@ server.productsGet(products => {
     productsWidget.setProducts(products);
 });
 
-server.userGet(user =>
-    select("#user").innerHTML =
-        `<span title=" login: ${user.login}">${user.name}</span>`);
+server.userGet(user => {
+    const e = select("#user");
+    e.innerHTML = `
+        <span title="login: ${user.login}">
+            ${user.name + (user.role === "admin" ? " (admin)" : "")}
+        </span>`;
+});
 
-function updateStats() {
-    server.ordersGet(orders => {
-        const sum = orders.map(o => o.price).reduce((sum, price) => sum + price, 0);
-        const count = orders.map(o => o.count).reduce((sum, count) => sum + count, 0);
-        const stat = html(`
-            <div class="ui statistics small">
-              <div class="statistic blue">
-                <div class="value">${orders.length}</div>
-                <div class="label">Objednávok</div>
-              </div>
-              <div class="statistic green">
-                <div class="value">${count}</div>
-                <div class="label">Produktov</div>
-              </div>
-              <div class="statistic red">
-                <div class="value">${sum.toFixed(2)} €</div>
-                <div class="label">Celková cena</div>
-              </div>
-            </div>`);
-        const e = select("orders");
-        empty(e);
-        append(e, stat);
-
-        // const e = jsonml(
-        //     ["div.orders",
-        //         ...orders.map(o => {
-        //             return (
-        //                 ["div", `${o.count}, ${o.price} €, ${o.timestamp}`]);
-        //         })
-        //     ]);
-        // select("orders").appendChild(e);
-    });
-}
-
-updateStats();
+server.ordersGet(orders => ordersStatsWidget.setOrders(orders));

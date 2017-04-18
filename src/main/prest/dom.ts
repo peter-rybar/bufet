@@ -96,7 +96,7 @@ export function jsonml(markup: Array<any>): HTMLElement {
                 if (i === 0) {
                     x.split("#").forEach((x: string, i: number) => {
                         if (i === 0) {
-                            e = document.createElement(x);
+                            e = document.createElement(x ? x : "div");
                         } else {
                             e.setAttribute("id", x);
                         }
@@ -119,6 +119,14 @@ export function jsonml(markup: Array<any>): HTMLElement {
                                             e.dataset[d] = m[a][d];
                                         }
                                     }
+                                } else if (a === "classes") {
+                                    e.classList.add(...m[a]);
+                                } else if (a === "styles") {
+                                    for (const d in m[a]) {
+                                        if (m[a].hasOwnProperty(d)) {
+                                            e.style.setProperty(d, m[a][d]);
+                                        }
+                                    }
                                 } else {
                                     e.setAttribute(a, m[a]);
                                 }
@@ -126,7 +134,8 @@ export function jsonml(markup: Array<any>): HTMLElement {
                         }
                         break;
                     case Array:
-                        e.appendChild(jsonml(m));
+                        const el = jsonml(m);
+                        e.appendChild(el);
                         break;
                     case String:
                         e.appendChild(document.createTextNode(m));
@@ -189,7 +198,6 @@ export function removeEventListener(element: HTMLElement,
 
 
 export interface Widget {
-    readonly name: string;
     mount(element: HTMLElement): this;
     umount(): this;
 }

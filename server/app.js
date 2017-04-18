@@ -6,20 +6,10 @@ var db = require('diskdb');
 
 var dbdir = __dirname + '/../db';
 db = db.connect(dbdir, ['users', 'products'/*, 'orders'*/]);
-if (!db.users.count()) {
-    db.users.save([
-        {
-            login: 'rybar',
-            password: 'peter',
-            name: 'Peter Rybár'
-        },
-        {
-            login: 'sovis',
-            password: 'pavol',
-            name: 'Pavol Soviš'
-        }
-    ]);
-}
+db.users.remove();
+db.loadCollections(['users']);
+var users = require('./users');
+db.users.save(users);
 if (!db.products.count()) {
     db.products.save([
         {
@@ -27,21 +17,24 @@ if (!db.products.count()) {
             title: 'Keksík',
             description: 'Keksík chutný',
             price: 7.3,
-            count: 7
+            count: 7,
+            sold: 0
         },
         {
             code: 'kolacik',
             title: 'Koláčik',
             description: 'Koláčik skvelý',
             price: 2.3,
-            count: 3
+            count: 3,
+            sold: 0
         },
         {
             code: 'cokoladka',
             title: 'Čokoládka',
             description: 'Čokoládka sladká',
             price: 1.2,
-            count: 5
+            count: 5,
+            sold: 0
         }
     ]);
 }
@@ -62,7 +55,7 @@ var jsonParser = bodyParser.json();
 // var textParser = bodyParser.text();
 // app.use(textParser);
 
-app.use(basicAuth({
+var authBasic = basicAuth({
     // users: {
     //     'admin': 'rybar'
     // },
@@ -79,10 +72,12 @@ app.use(basicAuth({
     //         ('Credentials ' + req.auth.user + ':' + req.auth.password + ' rejected') :
     //         'No credentials provided'
     // }
-}));
+});
+// app.use(authBasic);
 
 
 app.get('/', function (req, res) {
+    console.log('get', req.params, req.query);
     res.sendFile(path.join(__dirname + '/../static/index.html'));
 });
 
@@ -92,16 +87,8 @@ app.get('/', function (req, res) {
 // });
 
 app.get('/products', function (req, res) {
+    console.log('products get', req.params, req.query);
     res.json({products: db.products.find()});
-});
-
-app.get('/user', function (req, res) {
-    if (req.auth) {
-        var user = db.users.findOne({login: req.auth.user});
-        res.json({user: {login: user.login, name: user.name}});
-    } else {
-        res.sendStatus(404); // Not Found
-    }
 });
 
 app.get('/product/:id', function (req, res) {
@@ -114,7 +101,17 @@ app.get('/product/:id', function (req, res) {
     }
 });
 
-app.get('/orders', function (req, res) {
+app.get('/user', authBasic, function (req, res) {
+    console.log('user get', req.params, req.query);
+    if (req.auth) {
+        var user = db.users.findOne({login: req.auth.user});
+        res.json({user: {login: user.login, name: user.name, role: user.role}});
+    } else {
+        res.sendStatus(404); // Not Found
+    }
+});
+
+app.get('/orders', authBasic, function (req, res) {
     console.log('orders get', req.params, req.query, req.body);
 
     var userOrdersCollection = 'orders_' + req.auth.user;
@@ -130,7 +127,7 @@ app.get('/orders', function (req, res) {
     }
 });
 
-app.post('/order', jsonParser, function (req, res) {
+app.post('/order', authBasic, jsonParser, function (req, res) {
     console.log('order post', req.params, req.query, req.body);
     var order = req.body;
     // TODO check order posibiliti
@@ -149,7 +146,7 @@ app.post('/order', jsonParser, function (req, res) {
     }
 });
 
-app.get('/order/:id', function (req, res) {
+app.get('/order/:id', authBasic, function (req, res) {
     console.log('order get', req.params, req.query);
     var order = db.products.findOne({_id: req.params.id});
     if (order) {
@@ -164,7 +161,7 @@ app.use(express.static(path.join(__dirname, '../static')));
 app.use('/node_modules', express.static(path.join(__dirname, '../node_modules')));
 
 // console.log('NODE_ENV:', process.env.NODE_ENV || 'development');
-if (process.env.NODE_ENV == 'production') {
+if (process.env.NODE_ENV === 'production') {
     console.log('env: production');
     app.use(express.static(path.join(__dirname, '../dist')));
 } else {
@@ -176,7 +173,7 @@ if (process.env.NODE_ENV == 'production') {
 
 var port = 3000;
 var host = 'localhost';
-if (process.env.NODE_ENV == 'production') {
+if (process.env.NODE_ENV === 'production') {
     port = 3000;
     host = '0.0.0.0';
 }
