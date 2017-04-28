@@ -127,6 +127,47 @@ app.get('/orders', authBasic, function (req, res) {
     }
 });
 
+app.get('/orders/:userId', authBasic, function (req, res) {
+    console.log('orders get', req.params, req.query, req.body);
+    var user = db.users.findOne({login: req.auth.user});
+    if (req.params.userId && user.role === "admin") {
+        var userOrdersCollection = 'orders_' + req.params.userId;
+        if (!(userOrdersCollection in db)) {
+            db.loadCollections([userOrdersCollection]);
+        }
+        var orders = db[userOrdersCollection].find();
+
+        if (orders) {
+            const sum = orders
+                    .map(function (o) { return o.price; })
+                    .reduce(function (sum, price) { return sum + price; }, 0);
+            const count = orders
+                    .map(function (o) { return o.count; })
+                    .reduce(function (sum, count) { return sum + count; }, 0);
+            var sumar = sum.toFixed(2) + ' € ' + count + '\n\n';
+            sumar += orders
+                .map(function (o) {
+                    return '\n' + o.price.toFixed(2) + ' €\t' + o.count + '\t' + o.timestamp + '\n' +
+                        o.items
+                            .map(function (i) {
+                                return i.product.price.toFixed(2) + ' €\t' + i.count + '\t' + i.product.code;
+                            })
+                            .join('\n');
+                })
+                .join('\n');
+            res.send(sumar);
+            // res.send(JSON.stringify({
+            //     sum: sum,
+            //     count: count,
+            //     orders: orders}, null, 4));
+        } else {
+            res.sendStatus(404); // Not Found
+        }
+    } else {
+        res.sendStatus(404); // Not Found
+    }
+});
+
 app.post('/order', authBasic, jsonParser, function (req, res) {
     console.log('order post', req.params, req.query, req.body);
     var order = req.body;

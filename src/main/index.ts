@@ -328,7 +328,7 @@ class Server {
         this.baseUrl = baseUrl || "";
     }
 
-    userGet(onUser: (u: User) => void) {
+    userGet(onUser: (u: User) => void, onError: (e: Event) => void) {
         new HttpRequest()
             .get(this.baseUrl + "/user")
             .onResponse(res => {
@@ -338,11 +338,12 @@ class Server {
             })
             .onError(err => {
                 console.error(err);
+                onError && onError(err);
             })
             .send();
     }
 
-    productsGet(onProducts: (p: Product[]) => void) {
+    productsGet(onProducts: (p: Product[]) => void, onError: (e: Event) => void) {
         new HttpRequest()
             .get(this.baseUrl + "/products")
             .onResponse(res => {
@@ -352,11 +353,14 @@ class Server {
             })
             .onError(err => {
                 console.error(err);
+                onError && onError(err);
             })
             .send();
     }
 
-    orderPost(order: Order, onOrder: (o: OrderItem) => void) {
+    orderPost(order: Order,
+              onOrder: (o: OrderItem) => void,
+              onError: (e: Event) => void) {
         new HttpRequest()
             .post(this.baseUrl + "/order")
             .onResponse(res => {
@@ -366,11 +370,12 @@ class Server {
             })
             .onError(err => {
                 console.error(err);
+                onError && onError(err);
             })
             .send(order);
     }
 
-    ordersGet(onOrders: (o: Order[]) => void) {
+    ordersGet(onOrders: (o: Order[]) => void, onError: (e: Event) => void) {
         new HttpRequest()
             .get(this.baseUrl + "/orders")
             .onResponse(res => {
@@ -380,6 +385,7 @@ class Server {
             })
             .onError(err => {
                 console.error(err);
+                onError && onError(err);
             })
             .send();
     }
@@ -391,21 +397,25 @@ const server = new Server();
 
 
 const productsWidget = new ProductsWidget()
-    .onSigOrder(order => {
-        console.log("order", order);
-        ordersWidget.add(order);
-    })
+    .onSigOrder(order => ordersWidget.add(order))
     .mount(select("products"));
 
 const ordersWidget = new OrderWidget()
     .onSigOrder(order => {
-        console.log(order);
-        server.orderPost(order, order => {
-            console.log(order);
-            ordersWidget.orderDone();
-            ordersWidget.message();
-            server.ordersGet(orders => ordersStatsWidget.setOrders(orders));
-        });
+        server.orderPost(order,
+            order => {
+                ordersWidget.orderDone();
+                ordersWidget.message();
+                server.ordersGet(
+                    orders => ordersStatsWidget.setOrders(orders),
+                    err => console.log(err)
+                );
+            },
+            err => {
+                console.log(err);
+                ordersWidget.orderDone();
+            }
+        );
     })
     .mount(select("order"));
 
@@ -413,17 +423,32 @@ const ordersStatsWidget = new OrdersStatsWidget()
     .mount(select("orders"));
 
 
-server.productsGet(products => {
-    console.log("products", products);
-    productsWidget.setProducts(products);
-});
+server.productsGet(
+    products => {
+        console.log("products", products);
+        productsWidget.setProducts(products);
+    },
+    err => {
+        console.log(err);
+    }
+);
 
-server.userGet(user => {
-    const e = select("#user");
-    e.innerHTML = `
-        <span title="login: ${user.login}">
-            ${user.name + (user.role === "admin" ? " (admin)" : "")}
-        </span>`;
-});
 
-server.ordersGet(orders => ordersStatsWidget.setOrders(orders));
+select("#login").addEventListener("click", () => {
+    server.userGet(
+        user => {
+            const e = select("#user");
+            e.innerHTML = `
+                <span title="login: ${user.login}">
+                    ${user.name + (user.role === "admin" ? " (admin)" : "")}
+                </span>`;
+            server.ordersGet(
+                orders => ordersStatsWidget.setOrders(orders),
+                err => console.log(err)
+            );
+        },
+        err => {
+            console.log(err);
+        }
+    );
+});
