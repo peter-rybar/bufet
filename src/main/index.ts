@@ -318,137 +318,79 @@ class OrdersStatsWidget implements Widget {
 
 }
 
-// services
-
-class Server {
-
-    private baseUrl: string;
-
-    constructor(baseUrl?: string) {
-        this.baseUrl = baseUrl || "";
-    }
-
-    userGet(onUser: (u: User) => void, onError: (e: Event) => void) {
-        new HttpRequest()
-            .get(this.baseUrl + "/user")
-            .onResponse(res => {
-                console.log(res.getJson());
-                const user: User = res.getJson().user;
-                onUser && onUser(user);
-            })
-            .onError(err => {
-                console.error(err);
-                onError && onError(err);
-            })
-            .send();
-    }
-
-    productsGet(onProducts: (p: Product[]) => void, onError: (e: Event) => void) {
-        new HttpRequest()
-            .get(this.baseUrl + "/products")
-            .onResponse(res => {
-                console.log(res.getJson());
-                const products: Product[] = res.getJson().products;
-                onProducts && onProducts(products);
-            })
-            .onError(err => {
-                console.error(err);
-                onError && onError(err);
-            })
-            .send();
-    }
-
-    orderPost(order: Order,
-              onOrder: (o: OrderItem) => void,
-              onError: (e: Event) => void) {
-        new HttpRequest()
-            .post(this.baseUrl + "/order")
-            .onResponse(res => {
-                console.log(res.getJson());
-                const order: OrderItem = res.getJson().order;
-                onOrder && onOrder(order);
-            })
-            .onError(err => {
-                console.error(err);
-                onError && onError(err);
-            })
-            .send(order);
-    }
-
-    ordersGet(onOrders: (o: Order[]) => void, onError: (e: Event) => void) {
-        new HttpRequest()
-            .get(this.baseUrl + "/orders")
-            .onResponse(res => {
-                console.log(res.getJson());
-                const orders: Order[] = res.getJson().orders;
-                onOrders && onOrders(orders);
-            })
-            .onError(err => {
-                console.error(err);
-                onError && onError(err);
-            })
-            .send();
-    }
-}
 
 // main
 
-const server = new Server();
 
+class App {
 
-const productsWidget = new ProductsWidget()
-    .onSigOrder(order => ordersWidget.add(order))
-    .mount(select("products"));
+    private productsWidget: ProductsWidget;
+    private orderWidget: OrderWidget;
+    private ordersStatsWidget: OrdersStatsWidget;
 
-const ordersWidget = new OrderWidget()
-    .onSigOrder(order => {
-        server.orderPost(order,
-            order => {
-                ordersWidget.orderDone();
-                ordersWidget.message();
-                server.ordersGet(
-                    orders => ordersStatsWidget.setOrders(orders),
-                    err => console.log(err)
-                );
-            },
-            err => {
-                console.log(err);
-                ordersWidget.orderDone();
-            }
-        );
-    })
-    .mount(select("order"));
-
-const ordersStatsWidget = new OrdersStatsWidget()
-    .mount(select("orders"));
-
-
-server.productsGet(
-    products => {
-        console.log("products", products);
-        productsWidget.setProducts(products);
-    },
-    err => {
-        console.log(err);
+    run() {
+        this.initProducts();
+        this.initOrders();
+        this.initOrdersStat();
+        this.initLogin();
     }
-);
 
+    private initProducts(): void {
+        this.productsWidget = new ProductsWidget()
+            .onSigOrder(order => this.orderWidget.add(order))
+            .mount(select("products"));
+        new HttpRequest().get("/products")
+            .onResponse(res => this.productsWidget.setProducts(res.getJson().products))
+            .onError(err => console.error(err))
+            .send();
+    }
 
-select("#login").addEventListener("click", () => {
-    server.userGet(
-        user => {
-            const e = select("#user");
-            e.innerHTML = `
+    private initOrders(): void {
+        this.orderWidget = new OrderWidget()
+            .onSigOrder(order => {
+                new HttpRequest().post("/order")
+                    .onResponse(res => {
+                        this.orderWidget.orderDone();
+                        this.orderWidget.message();
+                        new HttpRequest().get("/orders")
+                            .onResponse(res => this.ordersStatsWidget.setOrders(res.getJson().orders))
+                            .onError(err => console.error(err))
+                            .send();
+                    })
+                    .onError(err => {
+                        console.error(err);
+                        this.orderWidget.orderDone();
+                    })
+                    .send(order);
+            })
+            .mount(select("order"));
+    }
+
+    private initOrdersStat(): void {
+        this.ordersStatsWidget = new OrdersStatsWidget()
+            .mount(select("orders"));
+    }
+
+    private initLogin(): void {
+        select("#login").addEventListener("click", () => {
+            new HttpRequest().get("/user")
+                .onResponse(res => {
+                    const user: User = res.getJson().user;
+                    select("#user").innerHTML = `
                 <span title="login: ${user.login}">
                     ${user.name + (user.role === "admin" ? " (admin)" : "")}
                 </span>`;
-            server.ordersGet(
-                orders => ordersStatsWidget.setOrders(orders),
-                err => console.log(err)
-            );
-        },
-        err => {
-            console.log(err);
-        }
-    );
-});
+                    new HttpRequest().get("/orders")
+                        .onResponse(res => this.ordersStatsWidget.setOrders(res.getJson().orders))
+                        .onError(err => console.error(err))
+                        .send();
+                })
+                .onError(err => console.error(err))
+                .send();
+        });
+    }
+
+}
+
+
+new App().run();
