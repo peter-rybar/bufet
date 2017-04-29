@@ -1,13 +1,12 @@
 ///<reference path="../../node_modules/@types/jquery/index.d.ts"/>
 
-import { HttpRequest } from "./prest/http";
+import { http } from "./prest/http";
 import { Signal } from "./prest/signal";
 import { Widget, JsonMLW } from "./prest/jsonmlidom";
 
 export const version: string = "@VERSION@";
 
 
-// model
 
 interface User {
     login: string;
@@ -37,7 +36,6 @@ interface Order {
 }
 
 
-// Widgets
 
 class ProductsWidget extends Widget {
 
@@ -206,7 +204,7 @@ class OrderWidget extends Widget {
                     ["div.header", this._message]
                     // ["p", "This is a special notification which you can dismiss if you're bored with it."]
                 ] :
-                ["span"])
+                [""])
         ];
     }
 
@@ -341,7 +339,7 @@ class App extends Widget {
     }
 
     private _login(): void {
-        new HttpRequest().get("/user")
+        http.get("/user")
             .onResponse(res => {
                 const user = res.getJson().user as User;
                 this._user = user;
@@ -366,36 +364,40 @@ class App extends Widget {
                     this._login();
                 }
             });
-        new HttpRequest().get("/products")
-            .onResponse(res => this._productsWidget.setProducts(res.getJson().products).update())
+        http.get("/products")
+            .onResponse(res =>
+                this._productsWidget.setProducts(res.getJson().products).update())
             .onError(err => console.error(err))
             .send();
     }
 
     private _updateOrdersStats(): void {
-        new HttpRequest().get("/orders")
-            .onResponse(res => this._ordersStatsWidget.setOrders(res.getJson().orders).update())
+        http.get("/orders")
+            .onResponse(res =>
+                this._ordersStatsWidget.setOrders(res.getJson().orders).update())
             .onError(err => console.error(err))
             .send();
     }
 
+    private _postOrder(order: Order): void {
+        http.post("/order")
+            .onResponse(res => {
+                this._orderWidget.setMessage("Objednávka bola odoslaná").empty().update();
+                this._updateOrdersStats();
+            })
+            .onError(err => {
+                console.error(err);
+                this._orderWidget
+                    .setMessage("Chyba odoslania objednávky: " +
+                        (err.currentTarget as XMLHttpRequest).status, "error")
+                    .update();
+            })
+            .send(order);
+    }
+
     private _initOrder(): void {
         this._orderWidget = new OrderWidget()
-            .onSigOrder(order => {
-                new HttpRequest().post("/order")
-                    .onResponse(res => {
-                        this._orderWidget.setMessage("Objednávka bola odoslaná").empty().update();
-                        this._updateOrdersStats();
-                    })
-                    .onError(err => {
-                        console.error(err);
-                        this._orderWidget
-                            .setMessage("Chyba odoslania objednávky: " +
-                                (err.currentTarget as XMLHttpRequest).status, "error")
-                            .update();
-                    })
-                    .send(order);
-            });
+            .onSigOrder(order => this._postOrder(order));
         this.sigUser.connect(user => this._updateOrdersStats());
     }
 
@@ -406,6 +408,5 @@ class App extends Widget {
 }
 
 
-// main
 
 new App().update("app");
