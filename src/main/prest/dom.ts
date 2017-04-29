@@ -105,34 +105,43 @@ export function jsonml(markup: Array<any>): HTMLElement {
                     e.classList.add(x);
                 }
             });
+        } else if (i === 1 && m.constructor === Object) {
+            for (const a in m) {
+                if (m.hasOwnProperty(a)) {
+                    switch (a) {
+                        case "data":
+                            for (const d in m[a]) {
+                                if (m[a].hasOwnProperty(d)) {
+                                    if (m[a][d].constructor === String) {
+                                        e.dataset[d] = m[a][d];
+                                    } else {
+                                        e.dataset[d] = JSON.stringify(m[a][d]);
+                                    }
+                                }
+                            }
+                            break;
+                        case "classes":
+                            e.classList.add(...m[a]);
+                            break;
+                        case "styles":
+                            for (const d in m[a]) {
+                                if (m[a].hasOwnProperty(d)) {
+                                    e.style.setProperty(d, m[a][d]);
+                                }
+                            }
+                            break;
+                        default:
+                            if (typeof m[a] === "function") {
+                                e.addEventListener(a, m[a]);
+                            } else {
+                                e.setAttribute(a, m[a]);
+                            }
+                    }
+                }
+            }
         } else {
             if (m) {
                 switch (m.constructor) {
-                    case Object:
-                        for (const a in m) {
-                            if (m.hasOwnProperty(a)) {
-                                if (typeof m[a] === "function") {
-                                    e.addEventListener(a, m[a]);
-                                } else if (a === "data") {
-                                    for (const d in m[a]) {
-                                        if (m[a].hasOwnProperty(d)) {
-                                            e.dataset[d] = m[a][d];
-                                        }
-                                    }
-                                } else if (a === "classes") {
-                                    e.classList.add(...m[a]);
-                                } else if (a === "styles") {
-                                    for (const d in m[a]) {
-                                        if (m[a].hasOwnProperty(d)) {
-                                            e.style.setProperty(d, m[a][d]);
-                                        }
-                                    }
-                                } else {
-                                    e.setAttribute(a, m[a]);
-                                }
-                            }
-                        }
-                        break;
                     case Array:
                         const el = jsonml(m);
                         e.appendChild(el);
@@ -155,6 +164,87 @@ export function jsonml(markup: Array<any>): HTMLElement {
     });
     return e;
 }
+
+// export function jsonmlv(markup: Array<any>, el?: HTMLElement): HTMLElement {
+//     let e: any;
+//     markup.forEach((m, i) => {
+//         if (i === 0) {
+//             m.split(".").forEach((x: string, i: number) => {
+//                 if (i === 0) {
+//                     x.split("#").forEach((x: string, i: number) => {
+//                         if (i === 0) {
+//                             const tagName = x ? x : "div";
+//                             e = {
+//                                 n: tagName,
+//                                 c: [], a: {}, d: {}, s: {}, e: {}, ch: []
+//                             };
+//                         } else {
+//                             e.a.id = x;
+//                         }
+//                     });
+//                 } else {
+//                     e.c.push(x);
+//                 }
+//             });
+//         } else if (i === 1 && m.constructor === Object) {
+//             for (const a in m) {
+//                 if (m.hasOwnProperty(a)) {
+//                     switch (a) {
+//                         case "data":
+//                             for (const d in m[a]) {
+//                                 if (m[a].hasOwnProperty(d)) {
+//                                     if (m[a][d].constructor === String) {
+//                                         e.d[d] = m[a][d];
+//                                     } else {
+//                                         e.d[d] = JSON.stringify(m[a][d]);
+//                                     }
+//                                 }
+//                             }
+//                             break;
+//                         case "classes":
+//                             e.c.push(...m[a]);
+//                             break;
+//                         case "styles":
+//                             for (const d in m[a]) {
+//                                 if (m[a].hasOwnProperty(d)) {
+//                                     e.s[d] = m[a][d];
+//                                 }
+//                             }
+//                             break;
+//                         default:
+//                             if (typeof m[a] === "function") {
+//                                 e.e[a] = "" + m[a];
+//                             } else {
+//                                 e.a[a] =  m[a];
+//                             }
+//                     }
+//                 }
+//             }
+//         } else {
+//             if (m) {
+//                 switch (m.constructor) {
+//                     case Array:
+//                         const el = jsonmlv(m);
+//                         e.ch.push(el);
+//                         break;
+//                     case String:
+//                         e.ch.push(m);
+//                         // const d = document.createElement("div");
+//                         // d.innerHTML = m;
+//                         // e.appendChild(d.childNodes[0]);
+//                         break;
+//                     default:
+//                         if (m.nodeType === 1) { // Node
+//                             // e.appendChild(m);
+//                         } else {
+//                             e.ch.push("" + m);
+//                         }
+//                 }
+//             }
+//         }
+//     });
+//     return e;
+// }
 
 
 if (!Element.prototype.matches) {

@@ -73,6 +73,7 @@
     "diskdb": "^0.1.17",
     "express": "^4.15.2",
     "express-basic-auth": "^1.0.1",
+    "incremental-dom": "^0.5.1",
     "semantic-ui-css": "^2.2.10"
   }
 }

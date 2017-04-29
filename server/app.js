@@ -155,6 +155,7 @@ app.get('/orders/:userId', authBasic, function (req, res) {
                             .join('\n');
                 })
                 .join('\n');
+            res.contentType("text/plain");
             res.send(sumar);
             // res.send(JSON.stringify({
             //     sum: sum,

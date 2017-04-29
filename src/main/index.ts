@@ -1,12 +1,11 @@
 ///<reference path="../../node_modules/@types/jquery/index.d.ts"/>
 
 import { HttpRequest } from "./prest/http";
-import {
-    Widget, html, select, jsonml, empty, remove, append
-} from "./prest/dom";
 import { Signal } from "./prest/signal";
+import { Widget, JsonMLW } from "./prest/jsonmlidom";
 
 export const version: string = "@VERSION@";
+
 
 // model
 
@@ -37,18 +36,18 @@ interface Order {
     timestamp?: string;
 }
 
-// UI
 
-class ProductsWidget implements Widget {
+// Widgets
+
+class ProductsWidget extends Widget {
+
+    private _products: Product[] = [];
 
     readonly sigOrderItem = new Signal<OrderItem>();
 
-    private _element: HTMLElement;
-    private _products: Product[] = [];
-
     setProducts(products: Product[]): this {
         this._products = products;
-        this._update();
+        this.update();
         return this;
     }
 
@@ -57,102 +56,54 @@ class ProductsWidget implements Widget {
         return this;
     }
 
-    mount(e: HTMLElement): this {
-        this._element = e;
-        this._update();
-        return this;
-    }
-
-    umount(): this {
-        return this;
-    }
-
-    element(): HTMLElement {
-        if (!this._element) {
-            this._element = html(`<div></div>`);
-        }
-        this._update();
-        return this._element;
-    }
-
-    private _update(): void {
-        if (this._element) {
-            // const el = jsonml(
-            //     ["div.products.ui.divided.items",
-            //         ...this._products.map(product => {
-            //             return (
-            //                 ["div.product.item", { title: `code: ${product.code}`},
-            //                     // ["div.image", ["img", {src: "img.jpg"}]],
-            //                     ["div.content",
-            //                         ["div.header", product.title, " "],
-            //                         ["div.meta", "novinka"],
-            //                         ["div.description", product.description],
-            //                         // ["strong.price", product.price, " € "],
-            //                         // ["em.count", product.count, " ks "]
-            //                         ["div.extra",
-            //                             ["div.ui.right.floated.button.primary", {
-            //                                 click: () => this.sigOrderItem.emit({ product: product, count: 1 }) },
-            //                                 ["i.icon.add.to.cart"], "Do košíka"
-            //                             ],
-            //                             ["strong.price", product.price.toFixed(2), " € "],
-            //                             ["span.count", product.count, " na sklade"]
-            //                         ]
-            //                     ]
-            //                 ]
-            //             );
-            //         })
-            //     ]);
-            const el = jsonml(
-                ["div.products.ui.cards",
-                    ...this._products.map(product => {
-                        return (
-                            ["div.product.card", { title: `code: ${product.code}`},
-                                // ["div.image", ["img", {src: "img.jpg"}]],
-                                ["div.content",
-                                    ["div.header", product.title, " "],
-                                    // ["div.meta", "novinka"],
-                                    ["div.description", product.description]
-                                ],
-                                ["div.extra",
-                                    ["strong.price", product.price.toFixed(2), " € "],
-                                    ["span.count.right.floated", product.count, " na sklade"]
-                                ],
-                                ["div.ui.bottom.attached.button", {
-                                        click: () => this.sigOrderItem.emit({ product: product, count: 1 }) },
-                                    ["i.icon.add.to.cart"], "Do košíka"
-                                ]
+    render(): JsonMLW {
+        return [
+            ["div.products.ui.cards",
+                ...this._products.map(product => {
+                    return (
+                        ["div.product.card", { title: `code: ${product.code}`},
+                            // ["div.image", ["img", {src: "img.jpg"}]],
+                            ["div.content",
+                                ["div.header", product.title, " "],
+                                // ["div.meta", "novinka"],
+                                ["div.description", product.description]
+                            ],
+                            ["div.extra",
+                                ["strong.price", product.price.toFixed(2), " € "],
+                                ["span.count.right.floated", product.count, " na sklade"]
+                            ],
+                            ["div.ui.bottom.attached.button", {
+                                onclick: () => this.sigOrderItem.emit({ product: product, count: 1 }) },
+                                ["i.icon.add.to.cart"],
+                                "Do košíka"
                             ]
-                        );
-                    })
-                ]);
-            empty(this._element);
-            append(this._element, el);
-        }
+                        ]
+                    );
+                })
+            ]
+        ];
     }
 
 }
 
-class OrderWidget implements Widget {
 
-    private _element: HTMLElement;
+class OrderWidget extends Widget {
+
     private _orderItems: OrderItem[] = [];
+    private _message: string;
+    private _messageType: "info" | "error";
 
     readonly sigOrder = new Signal<Order>();
 
-    orderDone(): this {
-        this._orderItems.length = 0;
-        this._update();
+    setMessage(message = "", type: "info" | "error" = "info"): this {
+        this._message = message;
+        this._messageType = type;
         return this;
     }
 
-    message(): void {
-        const e = jsonml(
-            ["div.ui.message.info",
-                ["i.close.icon", { click: () => remove(e) }],
-                ["div.header", "Objednávka bola odoslaná"]
-                // ["p", "This is a special notification which you can dismiss if you're bored with it."]
-            ]);
-        this._element.appendChild(e);
+    empty(): this {
+        this._orderItems.length = 0;
+        return this;
     }
 
     add(orderItem: OrderItem): this {
@@ -163,7 +114,6 @@ class OrderWidget implements Widget {
         } else {
             this._orderItems.push(orderItem);
         }
-        this._update();
         return this;
     }
 
@@ -178,7 +128,6 @@ class OrderWidget implements Widget {
                     .filter(o => o.product.code !== orderItem.product.code);
             }
         }
-        this._update();
         return this;
     }
 
@@ -187,133 +136,271 @@ class OrderWidget implements Widget {
         return this;
     }
 
-    mount(e: HTMLElement): this {
-        this._element = e;
-        this._update();
-        return this;
-    }
-
-    umount(): this {
-        return this;
-    }
-
-    private _update(): void {
-        if (this._element) {
-            const price = this._orderItems.reduce(
-                (sum, order) => sum + order.product.price * order.count,
-                0);
-            const count = this._orderItems.reduce(
-                (count, order) => count + order.count,
-                0);
-            const el = jsonml(
-                ["table.orders.ui.table.selectable.compact",
-                    ["thead",
-                        ["tr",
-                            ["th", "Produkt"],
-                            ["th", "Jedn. Cena"],
-                            ["th.center.aligned", "Počet"],
-                            ["th.center.aligned", "Cena"],
-                            ["th"]
-                        ]
-                    ],
-                    ["tbody",
-                        ...this._orderItems.map(orderItem => {
-                            return (
-                                ["tr.order", { title: `code: ${orderItem.product.code}` },
-                                    ["td", orderItem.product.title],
-                                    ["td", `${orderItem.product.price.toFixed(2)} €`],
-                                    ["td.center.aligned", orderItem.count],
-                                    ["td.right.aligned", `${(orderItem.product.price * orderItem.count).toFixed(2)} €`],
-                                    ["td.center.aligned",
-                                        ["button.ui.button.icon.tiny",
-                                            { click: () => this.remove(orderItem) },
-                                            ["i.icon.minus"]
-                                        ],
-                                        ["button.ui.button.icon.tiny",
-                                            { click: () => this.add(orderItem) },
-                                            ["i.icon.plus"]
-                                        ]
+    render(): JsonMLW {
+        const price = this._orderItems.reduce(
+            (sum, order) => sum + order.product.price * order.count,
+            0);
+        const count = this._orderItems.reduce(
+            (count, order) => count + order.count,
+            0);
+        return [
+            ["table.orders.ui.table.selectable.compact",
+                ["thead",
+                    ["tr",
+                        ["th", "Produkt"],
+                        ["th", "Jedn. Cena"],
+                        ["th.center.aligned", "Počet"],
+                        ["th.center.aligned", "Cena"],
+                        ["th"]
+                    ]
+                ],
+                ["tbody",
+                    ...this._orderItems.map(orderItem => {
+                        return (
+                            ["tr.order", { title: `code: ${orderItem.product.code}` },
+                                ["td", orderItem.product.title],
+                                ["td", orderItem.product.price.toFixed(2), " €"],
+                                ["td.center.aligned", orderItem.count],
+                                ["td.right.aligned", (orderItem.product.price * orderItem.count).toFixed(2), " €"],
+                                ["td.center.aligned",
+                                    ["button.ui.button.icon.tiny",
+                                        { onclick: () => this.remove(orderItem).update() },
+                                        ["i.icon.minus"]
+                                    ],
+                                    ["button.ui.button.icon.tiny",
+                                        { onclick: () => this.add(orderItem).update() },
+                                        ["i.icon.plus"]
                                     ]
-                                ]);
-                        })
-                    ],
-                    ["tfoot.full-width",
-                        ["tr",
-                            ["th", { colspan: 2 }],
-                            ["th.center.aligned", ["strong", "" + count]],
-                            ["th.right.aligned", ["strong", "" + price.toFixed(2)], " €"],
-                            ["th.center.aligned",
-                                ["button.order.ui.button" + (price ? "" : ".disabled"),
-                                    {
-                                        click: (e: Event) => {
-                                            (e.target as Element).classList.add("loading");
-                                            this.sigOrder.emit(
-                                                {
-                                                    items: this._orderItems,
-                                                    count: count,
-                                                    price: +price.toFixed(2)
-                                                });
-                                        }
-                                    },
-                                    // ["i.icon.send"],
-                                    "Objednať"
                                 ]
                             ]
+                        );
+                    })
+                ],
+                ["tfoot.full-width",
+                    ["tr",
+                        ["th", { colspan: 2 }],
+                        ["th.center.aligned", ["strong", "" + count]],
+                        ["th.right.aligned", ["strong", price.toFixed(2)], " €"],
+                        ["th.center.aligned",
+                            ["button.order.ui.button" + (price ? "" : ".disabled"),
+                                {
+                                    onclick: (e: Event) => {
+                                        (e.target as Element).classList.add("loading");
+                                        this.sigOrder.emit(
+                                            {
+                                                items: this._orderItems,
+                                                count: count,
+                                                price: +price.toFixed(2)
+                                            });
+                                    }
+                                },
+                                // ["i.icon.send"],
+                                "Objednať"]
                         ]
                     ]
-                ]);
-            // ($(this._element) as any).tablesort();
-            empty(this._element);
-            append(this._element, el);
-        }
+                ]
+            ],
+            (this._message ?
+                ["div.ui.message." + this._messageType,
+                    ["i.close.icon", { onclick: () => this.setMessage().update() }],
+                    ["div.header", this._message]
+                    // ["p", "This is a special notification which you can dismiss if you're bored with it."]
+                ] :
+                ["span"])
+        ];
     }
 
 }
 
 
-class OrdersStatsWidget implements Widget {
+class OrdersStatsWidget extends Widget {
 
-    private _element: HTMLElement;
     private _orders: Order[] = [];
 
     setOrders(orders: Order[]): this {
         this._orders = orders;
-        this._update();
+        this.update();
         return this;
     }
 
-    mount(e: HTMLElement): this {
-        this._element = e;
-        this._update();
+    render(): JsonMLW {
+        const orders = this._orders;
+        const sum = orders.map(o => o.price).reduce((sum, price) => sum + price, 0);
+        const count = orders.map(o => o.count).reduce((sum, count) => sum + count, 0);
+        return [
+            ["div.ui.statistics.small",
+                ["div.statistic.blue",
+                    ["div.value", orders.length],
+                    ["div.label", "Objednávky"]
+                ],
+                ["div.statistic.green",
+                    ["div.value", count],
+                    ["div.label", "Produkty"]
+                ],
+                ["div.statistic.red",
+                    ["div.value", sum.toFixed(2), " €"],
+                    ["div.label", "Celková cena"]
+                ]
+            ]
+        ];
+    }
+
+}
+
+
+class MenuWidget extends Widget {
+
+    private _user: User;
+
+    readonly sigLogin = new Signal<void>();
+
+    constructor() {
+        super();
+    }
+
+    setUser(user: User): this {
+        this._user = user;
         return this;
     }
 
-    umount(): this {
+    onSigLogin(slot: () => void): this {
+        this.sigLogin.connect(slot);
         return this;
     }
 
-    private _update(): void {
-        if (this._element) {
-            const orders = this._orders;
-            const sum = orders.map(o => o.price).reduce((sum, price) => sum + price, 0);
-            const count = orders.map(o => o.count).reduce((sum, count) => sum + count, 0);
-            const stat = `
-                <div class="ui statistics small">
-                    <div class="statistic blue">
-                        <div class="value">${orders.length}</div>
-                        <div class="label">Objednávky</div>
-                    </div>
-                    <div class="statistic green">
-                        <div class="value">${count}</div>
-                        <div class="label">Produkty</div>
-                    </div>
-                    <div class="statistic red">
-                        <div class="value">${sum.toFixed(2)} €</div>
-                        <div class="label">Celková cena</div>
-                    </div>
-                </div>`;
-            this._element.innerHTML = stat;
-        }
+    render(): JsonMLW {
+        return [
+            ["div.ui.secondary.pointing.menu",
+                ["a.item.active", "Bufet"],
+                ["a.item", { href: "#order" }, "Nákupný Košík"],
+                ["div.right.menu",
+                    ["a.ui.item",
+                        ["span", { onclick: (e: Event) => this.sigLogin.emit() },
+                            this._user ?
+                                ["span", { title: `login: ${this._user.login}` },
+                                    this._user.name + (this._user.role === "admin" ? " (admin)" : "")
+                                ] :
+                                ["span", { id: "login" }, "Login"]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+    }
+
+}
+
+
+class App extends Widget {
+
+    private _menuWidget: MenuWidget;
+    private _productsWidget: ProductsWidget;
+    private _orderWidget: OrderWidget;
+    private _ordersStatsWidget: OrdersStatsWidget;
+
+    private _user: User;
+
+    readonly sigUser = new Signal<User>();
+
+    constructor() {
+        super();
+        this._initMenu();
+        this._initProducts();
+        this._initOrder();
+        this._initOrdersStat();
+    }
+
+    render(): JsonMLW {
+        return [
+            ["div.ui.container",
+                this._menuWidget
+            ],
+            ["div.ui.container",
+                ["div.ui.basic.segment",
+                    ["h1", "Produkty"],
+                    this._productsWidget
+                ]
+            ],
+            ["div.ui.container",
+                ["div.ui.two.column.stackable.grid.container-",
+                    ["div.column",
+                        ["div.ui.segment.basic",
+                            ["h2", { id: "order" }, "Nákupný Košík"],
+                            this._orderWidget
+                        ]
+                    ],
+                    ["div.column",
+                        ["div.ui.segment.basic",
+                            ["h2", "Sumár"],
+                            this._ordersStatsWidget
+                        ]
+                    ]
+                ]
+            ]
+        ];
+    }
+
+    private _login(): void {
+        new HttpRequest().get("/user")
+            .onResponse(res => {
+                const user = res.getJson().user as User;
+                this._user = user;
+                this.sigUser.emit(user);
+            })
+            .onError(err => console.error(err))
+            .send();
+    }
+
+    private _initMenu(): void {
+        this._menuWidget = new MenuWidget()
+            .onSigLogin(() => this._login());
+        this.sigUser.connect(user => this._menuWidget.setUser(user).update());
+    }
+
+    private _initProducts(): void {
+        this._productsWidget = new ProductsWidget()
+            .onSigOrder(order => {
+                if (this._user) {
+                    this._orderWidget.add(order).update();
+                } else {
+                    this._login();
+                }
+            });
+        new HttpRequest().get("/products")
+            .onResponse(res => this._productsWidget.setProducts(res.getJson().products).update())
+            .onError(err => console.error(err))
+            .send();
+    }
+
+    private _updateOrdersStats(): void {
+        new HttpRequest().get("/orders")
+            .onResponse(res => this._ordersStatsWidget.setOrders(res.getJson().orders).update())
+            .onError(err => console.error(err))
+            .send();
+    }
+
+    private _initOrder(): void {
+        this._orderWidget = new OrderWidget()
+            .onSigOrder(order => {
+                new HttpRequest().post("/order")
+                    .onResponse(res => {
+                        this._orderWidget.setMessage("Objednávka bola odoslaná").empty().update();
+                        this._updateOrdersStats();
+                    })
+                    .onError(err => {
+                        console.error(err);
+                        this._orderWidget
+                            .setMessage("Chyba odoslania objednávky: " +
+                                (err.currentTarget as XMLHttpRequest).status, "error")
+                            .update();
+                    })
+                    .send(order);
+            });
+        this.sigUser.connect(user => this._updateOrdersStats());
+    }
+
+    private _initOrdersStat(): void {
+        this._ordersStatsWidget = new OrdersStatsWidget();
     }
 
 }
@@ -321,76 +408,4 @@ class OrdersStatsWidget implements Widget {
 
 // main
 
-
-class App {
-
-    private productsWidget: ProductsWidget;
-    private orderWidget: OrderWidget;
-    private ordersStatsWidget: OrdersStatsWidget;
-
-    run() {
-        this.initProducts();
-        this.initOrders();
-        this.initOrdersStat();
-        this.initLogin();
-    }
-
-    private initProducts(): void {
-        this.productsWidget = new ProductsWidget()
-            .onSigOrder(order => this.orderWidget.add(order))
-            .mount(select("products"));
-        new HttpRequest().get("/products")
-            .onResponse(res => this.productsWidget.setProducts(res.getJson().products))
-            .onError(err => console.error(err))
-            .send();
-    }
-
-    private initOrders(): void {
-        this.orderWidget = new OrderWidget()
-            .onSigOrder(order => {
-                new HttpRequest().post("/order")
-                    .onResponse(res => {
-                        this.orderWidget.orderDone();
-                        this.orderWidget.message();
-                        new HttpRequest().get("/orders")
-                            .onResponse(res => this.ordersStatsWidget.setOrders(res.getJson().orders))
-                            .onError(err => console.error(err))
-                            .send();
-                    })
-                    .onError(err => {
-                        console.error(err);
-                        this.orderWidget.orderDone();
-                    })
-                    .send(order);
-            })
-            .mount(select("order"));
-    }
-
-    private initOrdersStat(): void {
-        this.ordersStatsWidget = new OrdersStatsWidget()
-            .mount(select("orders"));
-    }
-
-    private initLogin(): void {
-        select("#login").addEventListener("click", () => {
-            new HttpRequest().get("/user")
-                .onResponse(res => {
-                    const user: User = res.getJson().user;
-                    select("#user").innerHTML = `
-                <span title="login: ${user.login}">
-                    ${user.name + (user.role === "admin" ? " (admin)" : "")}
-                </span>`;
-                    new HttpRequest().get("/orders")
-                        .onResponse(res => this.ordersStatsWidget.setOrders(res.getJson().orders))
-                        .onError(err => console.error(err))
-                        .send();
-                })
-                .onError(err => console.error(err))
-                .send();
-        });
-    }
-
-}
-
-
-new App().run();
+new App().update("app");
