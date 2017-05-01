@@ -37,6 +37,52 @@ interface Order {
 
 
 
+class MenuWidget extends Widget {
+
+    private _user: User;
+
+    readonly sigLogin = new Signal<void>();
+
+    constructor() {
+        super();
+    }
+
+    setUser(user: User): this {
+        this._user = user;
+        return this;
+    }
+
+    onSigLogin(slot: () => void): this {
+        this.sigLogin.connect(slot);
+        return this;
+    }
+
+    render(): JsonMLW {
+        return [
+            ["div.ui.segment.basic",
+                ["div.ui.secondary.pointing.menu",
+                    ["a.item.active", "Bufet"],
+                    ["a.item", { href: "#order" }, "Nákupný Košík"],
+                    ["a.item", { href: "#orders" }, "Objednávky"],
+                    ["div.right.menu",
+                        ["a.ui.item",
+                            ["span", { onclick: (e: Event) => this.sigLogin.emit() },
+                                this._user ?
+                                    ["span", { title: `login: ${this._user.login}` },
+                                        this._user.name + (this._user.role === "admin" ? " (admin)" : "")
+                                    ] :
+                                    ["span", { id: "login" }, "Login"]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+    }
+
+}
+
+
 class ProductsWidget extends Widget {
 
     private _products: Product[] = [];
@@ -211,6 +257,41 @@ class OrderWidget extends Widget {
 }
 
 
+class OrdersStatsWidget extends Widget {
+
+    private _orders: Order[] = [];
+
+    setOrders(orders: Order[]): this {
+        this._orders = orders;
+        this.update();
+        return this;
+    }
+
+    render(): JsonMLW {
+        const orders = this._orders;
+        const sum = orders.map(o => o.price).reduce((sum, price) => sum + price, 0);
+        const count = orders.map(o => o.count).reduce((sum, count) => sum + count, 0);
+        return [
+            ["div.ui.statistics.small",
+                ["div.statistic.blue",
+                    ["div.value", orders.length],
+                    ["div.label", "Objednávky"]
+                ],
+                ["div.statistic.green",
+                    ["div.value", count],
+                    ["div.label", "Produkty"]
+                ],
+                ["div.statistic.red",
+                    ["div.value", sum.toFixed(2), "€"],
+                    ["div.label", "Celková cena"]
+                ]
+            ]
+        ];
+    }
+
+}
+
+
 class OrdersWidget extends Widget {
 
     private _orders: Order[] = [];
@@ -268,86 +349,6 @@ class OrdersWidget extends Widget {
 }
 
 
-class OrdersStatsWidget extends Widget {
-
-    private _orders: Order[] = [];
-
-    setOrders(orders: Order[]): this {
-        this._orders = orders;
-        this.update();
-        return this;
-    }
-
-    render(): JsonMLW {
-        const orders = this._orders;
-        const sum = orders.map(o => o.price).reduce((sum, price) => sum + price, 0);
-        const count = orders.map(o => o.count).reduce((sum, count) => sum + count, 0);
-        return [
-            ["div.ui.statistics.small",
-                ["div.statistic.blue",
-                    ["div.value", orders.length],
-                    ["div.label", "Objednávky"]
-                ],
-                ["div.statistic.green",
-                    ["div.value", count],
-                    ["div.label", "Produkty"]
-                ],
-                ["div.statistic.red",
-                    ["div.value", sum.toFixed(2), "€"],
-                    ["div.label", "Celková cena"]
-                ]
-            ]
-        ];
-    }
-
-}
-
-
-class MenuWidget extends Widget {
-
-    private _user: User;
-
-    readonly sigLogin = new Signal<void>();
-
-    constructor() {
-        super();
-    }
-
-    setUser(user: User): this {
-        this._user = user;
-        return this;
-    }
-
-    onSigLogin(slot: () => void): this {
-        this.sigLogin.connect(slot);
-        return this;
-    }
-
-    render(): JsonMLW {
-        return [
-            ["div.ui.segment.basic",
-                ["div.ui.secondary.pointing.menu",
-                    ["a.item.active", "Bufet"],
-                    ["a.item", { href: "#order" }, "Nákupný Košík"],
-                    ["div.right.menu",
-                        ["a.ui.item",
-                            ["span", { onclick: (e: Event) => this.sigLogin.emit() },
-                                this._user ?
-                                    ["span", { title: `login: ${this._user.login}` },
-                                        this._user.name + (this._user.role === "admin" ? " (admin)" : "")
-                                    ] :
-                                    ["span", { id: "login" }, "Login"]
-                            ]
-                        ]
-                    ]
-                ]
-            ]
-        ];
-    }
-
-}
-
-
 class App extends Widget {
 
     private _menuWidget: MenuWidget;
@@ -398,7 +399,7 @@ class App extends Widget {
             ],
             ["div.ui.container",
                 ["div.ui.segment.basic",
-                    ["h2", "Objednávky"],
+                    ["h2", { id: "orders" }, "Objednávky"],
                     this._ordersWidget
                 ]
             ],
