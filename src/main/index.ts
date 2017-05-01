@@ -67,7 +67,7 @@ class ProductsWidget extends Widget {
                                 ["div.description", product.description]
                             ],
                             ["div.extra",
-                                ["strong.price", product.price.toFixed(2), " € "],
+                                ["strong.price", product.price.toFixed(2), "€ "],
                                 ["span.count.right.floated", product.count, " na sklade"]
                             ],
                             ["div.ui.bottom.attached.button", {
@@ -157,9 +157,9 @@ class OrderWidget extends Widget {
                         return (
                             ["tr.order", { title: `code: ${orderItem.product.code}` },
                                 ["td", orderItem.product.title],
-                                ["td", orderItem.product.price.toFixed(2), " €"],
+                                ["td", orderItem.product.price.toFixed(2), "€"],
                                 ["td.center.aligned", orderItem.count],
-                                ["td.right.aligned", (orderItem.product.price * orderItem.count).toFixed(2), " €"],
+                                ["td.right.aligned", (orderItem.product.price * orderItem.count).toFixed(2), "€"],
                                 ["td.center.aligned",
                                     ["button.ui.button.icon.tiny",
                                         { onclick: () => this.remove(orderItem).update() },
@@ -178,7 +178,7 @@ class OrderWidget extends Widget {
                     ["tr",
                         ["th", { colspan: 2 }],
                         ["th.center.aligned", ["strong", "" + count]],
-                        ["th.right.aligned", ["strong", price.toFixed(2)], " €"],
+                        ["th.right.aligned", ["strong", price.toFixed(2)], "€"],
                         ["th.center.aligned",
                             ["button.order.ui.button" + (price ? "" : ".disabled"),
                                 {
@@ -211,6 +211,63 @@ class OrderWidget extends Widget {
 }
 
 
+class OrdersWidget extends Widget {
+
+    private _orders: Order[] = [];
+
+    empty(): this {
+        this._orders.length = 0;
+        return this;
+    }
+
+    getOrders(): Order[] {
+        return this._orders;
+    }
+
+    setOrders(orders: Order[]): this {
+        this._orders = orders;
+        return this;
+    }
+
+    render(): JsonMLW {
+        return this._orders.map(order => {
+            return (
+                ["table.orders.ui.table.selectable.compact",
+                    ["thead",
+                        ["tr",
+                            ["th", "Produkt"],
+                            ["th", "Jedn. Cena"],
+                            ["th.center.aligned", "Počet"],
+                            ["th.center.aligned", "Cena"]
+                        ]
+                    ],
+                    ["tbody",
+                        ...order.items.map(orderItem => {
+                            return (
+                                ["tr.order", { title: `code: ${orderItem.product.code}` },
+                                    ["td", orderItem.product.title],
+                                    ["td", orderItem.product.price.toFixed(2), "€"],
+                                    ["td.center.aligned", orderItem.count],
+                                    ["td.right.aligned", (orderItem.product.price * orderItem.count).toFixed(2), "€"]
+                                ]
+                            );
+                        })
+                    ],
+                    ["tfoot.full-width",
+                        ["tr",
+                            ["th", { colspan: 2 }, order.timestamp],
+                            ["th.center.aligned", ["strong", "" + order.count]],
+                            ["th.right.aligned", ["strong", order.price.toFixed(2)], "€"]
+                        ]
+                    ]
+                ]
+            );
+        });
+    }
+
+}
+
+
 class OrdersStatsWidget extends Widget {
 
     private _orders: Order[] = [];
@@ -236,7 +293,7 @@ class OrdersStatsWidget extends Widget {
                     ["div.label", "Produkty"]
                 ],
                 ["div.statistic.red",
-                    ["div.value", sum.toFixed(2), " €"],
+                    ["div.value", sum.toFixed(2), "€"],
                     ["div.label", "Celková cena"]
                 ]
             ]
@@ -268,17 +325,19 @@ class MenuWidget extends Widget {
 
     render(): JsonMLW {
         return [
-            ["div.ui.secondary.pointing.menu",
-                ["a.item.active", "Bufet"],
-                ["a.item", { href: "#order" }, "Nákupný Košík"],
-                ["div.right.menu",
-                    ["a.ui.item",
-                        ["span", { onclick: (e: Event) => this.sigLogin.emit() },
-                            this._user ?
-                                ["span", { title: `login: ${this._user.login}` },
-                                    this._user.name + (this._user.role === "admin" ? " (admin)" : "")
-                                ] :
-                                ["span", { id: "login" }, "Login"]
+            ["div.ui.segment.basic",
+                ["div.ui.secondary.pointing.menu",
+                    ["a.item.active", "Bufet"],
+                    ["a.item", { href: "#order" }, "Nákupný Košík"],
+                    ["div.right.menu",
+                        ["a.ui.item",
+                            ["span", { onclick: (e: Event) => this.sigLogin.emit() },
+                                this._user ?
+                                    ["span", { title: `login: ${this._user.login}` },
+                                        this._user.name + (this._user.role === "admin" ? " (admin)" : "")
+                                    ] :
+                                    ["span", { id: "login" }, "Login"]
+                            ]
                         ]
                     ]
                 ]
@@ -295,6 +354,7 @@ class App extends Widget {
     private _productsWidget: ProductsWidget;
     private _orderWidget: OrderWidget;
     private _ordersStatsWidget: OrdersStatsWidget;
+    private _ordersWidget: OrdersWidget;
 
     private _user: User;
 
@@ -306,6 +366,7 @@ class App extends Widget {
         this._initProducts();
         this._initOrder();
         this._initOrdersStat();
+        this._initOrders();
     }
 
     render(): JsonMLW {
@@ -320,7 +381,7 @@ class App extends Widget {
                 ]
             ],
             ["div.ui.container",
-                ["div.ui.two.column.stackable.grid.container-",
+                ["div.ui.two.column.stackable.grid",
                     ["div.column",
                         ["div.ui.segment.basic",
                             ["h2", { id: "order" }, "Nákupný Košík"],
@@ -332,6 +393,27 @@ class App extends Widget {
                             ["h2", "Sumár"],
                             this._ordersStatsWidget
                         ]
+                    ]
+                ]
+            ],
+            ["div.ui.container",
+                ["div.ui.segment.basic",
+                    ["h2", "Objednávky"],
+                    this._ordersWidget
+                ]
+            ],
+
+            ["div.ui.vertical.segment.footer",
+                ["div.ui.container.right",
+                    ["div.ui.segment.basic",
+                        "Author: ",
+                        ["a", { href: "http://prest-tech.appspot.com/peter-rybar"},
+                            "Peter Rybár"
+                        ],
+                        " (",
+                        ["a", { href: "mailto:pr.rybar@gmail.com"},
+                            "pr.rybar@gmail.com"
+                        ], ")",
                     ]
                 ]
             ]
@@ -384,6 +466,7 @@ class App extends Widget {
             .onResponse(res => {
                 this._orderWidget.setMessage("Objednávka bola odoslaná").empty().update();
                 this._updateOrdersStats();
+                this._updateOrders();
             })
             .onError(err => {
                 console.error(err);
@@ -401,8 +484,21 @@ class App extends Widget {
         this.sigUser.connect(user => this._updateOrdersStats());
     }
 
+    private _updateOrders(): void {
+        http.get("/orders")
+            .onResponse(res =>
+                this._ordersWidget.setOrders(res.getJson().orders).update())
+            .onError(err => console.error(err))
+            .send();
+    }
+
     private _initOrdersStat(): void {
         this._ordersStatsWidget = new OrdersStatsWidget();
+    }
+
+    private _initOrders(): void {
+        this._ordersWidget = new OrdersWidget();
+        this.sigUser.connect(user => this._updateOrders());
     }
 
 }

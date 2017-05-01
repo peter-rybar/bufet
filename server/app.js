@@ -147,10 +147,13 @@ app.get('/orders/:userId', authBasic, function (req, res) {
             var sumar = sum.toFixed(2) + ' € ' + count + '\n\n';
             sumar += orders
                 .map(function (o) {
-                    return '\n' + o.price.toFixed(2) + ' €\t' + o.count + '\t' + o.timestamp + '\n' +
+                    return '\n' + o.price.toFixed(2) + ' €\t' +
+                        o.count + '\t' +
+                        o.timestamp + '\n' +
                         o.items
                             .map(function (i) {
-                                return i.product.price.toFixed(2) + ' €\t' + i.count + '\t' + i.product.code;
+                                return i.product.price.toFixed(2) + ' €\t' +
+                                    i.count + '\t' + i.product.code;
                             })
                             .join('\n');
                 })
