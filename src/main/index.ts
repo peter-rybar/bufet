@@ -311,39 +311,43 @@ class OrdersWidget extends Widget {
     }
 
     render(): JsonMLW {
-        return this._orders.map(order => {
-            return (
-                ["table.orders.ui.table.selectable.compact",
-                    ["thead",
-                        ["tr",
-                            ["th", "Produkt"],
-                            ["th", "Jedn. Cena"],
-                            ["th.center.aligned", "Počet"],
-                            ["th.center.aligned", "Cena"]
-                        ]
-                    ],
-                    ["tbody",
-                        ...order.items.map(orderItem => {
-                            return (
-                                ["tr.order", { title: `code: ${orderItem.product.code}` },
-                                    ["td", orderItem.product.title],
-                                    ["td", orderItem.product.price.toFixed(2), "€"],
-                                    ["td.center.aligned", orderItem.count],
-                                    ["td.right.aligned", (orderItem.product.price * orderItem.count).toFixed(2), "€"]
-                                ]
-                            );
-                        })
-                    ],
-                    ["tfoot.full-width",
-                        ["tr",
-                            ["th", { colspan: 2 }, order.timestamp],
-                            ["th.center.aligned", ["strong", "" + order.count]],
-                            ["th.right.aligned", ["strong", order.price.toFixed(2)], "€"]
-                        ]
+        return [
+            ["table.orders.ui.table.selectable.compact",
+                ["thead",
+                    ["tr",
+                        ["th", "Produkt"],
+                        ["th", "Jedn. Cena"],
+                        ["th.center.aligned", "Počet"],
+                        ["th.center.aligned", "Cena"]
                     ]
-                ]
-            );
-        });
+                ],
+                ...this._orders
+                    .map(order => {
+                        return [
+                            ["tr.orders",
+                                ["td", { colspan: 4 },
+                                    ["strong", new Date(order.timestamp).toUTCString()]]
+                            ],
+                            ...order.items.map(orderItem => {
+                                return (
+                                    ["tr.order", { title: `code: ${orderItem.product.code}` },
+                                        ["td", orderItem.product.title],
+                                        ["td", orderItem.product.price.toFixed(2), "€"],
+                                        ["td.center.aligned", orderItem.count],
+                                        ["td.right.aligned", (orderItem.product.price * orderItem.count).toFixed(2), "€"]
+                                    ]
+                                );
+                            }),
+                            ["tr.sumar",
+                                ["td", { colspan: 2 }],
+                                ["td.center.aligned", ["strong", "" + order.count]],
+                                ["td.right.aligned", ["strong", order.price.toFixed(2)], "€"]
+                            ]
+                        ];
+                    })
+                    .reduce((a, i) => a.concat(i), [])
+            ]
+        ];
     }
 
 }
@@ -403,18 +407,17 @@ class App extends Widget {
                     this._ordersWidget
                 ]
             ],
-
             ["div.ui.vertical.segment.footer",
-                ["div.ui.container.right",
+                ["div.ui.container",
                     ["div.ui.segment.basic",
                         "Author: ",
                         ["a", { href: "http://prest-tech.appspot.com/peter-rybar"},
                             "Peter Rybár"
                         ],
-                        " (",
+                        " – Mail: ",
                         ["a", { href: "mailto:pr.rybar@gmail.com"},
                             "pr.rybar@gmail.com"
-                        ], ")",
+                        ]
                     ]
                 ]
             ]
@@ -485,16 +488,16 @@ class App extends Widget {
         this.sigUser.connect(user => this._updateOrdersStats());
     }
 
+    private _initOrdersStat(): void {
+        this._ordersStatsWidget = new OrdersStatsWidget();
+    }
+
     private _updateOrders(): void {
         http.get("/orders")
             .onResponse(res =>
                 this._ordersWidget.setOrders(res.getJson().orders).update())
             .onError(err => console.error(err))
             .send();
-    }
-
-    private _initOrdersStat(): void {
-        this._ordersStatsWidget = new OrdersStatsWidget();
     }
 
     private _initOrders(): void {
