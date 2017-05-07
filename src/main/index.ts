@@ -1,8 +1,7 @@
-///<reference path="../../node_modules/@types/jquery/index.d.ts"/>
 
 import { http } from "./prest/http";
 import { Signal } from "./prest/signal";
-import { Widget, JsonMLW } from "./prest/jsonmlidom";
+import { Widget, JsonMLs } from "./prest/jsonml";
 
 export const version: string = "@VERSION@";
 
@@ -57,7 +56,7 @@ class MenuWidget extends Widget {
         return this;
     }
 
-    render(): JsonMLW {
+    render(): JsonMLs {
         return [
             ["div.ui.segment.basic",
                 ["div.ui.secondary.pointing.menu",
@@ -66,7 +65,7 @@ class MenuWidget extends Widget {
                     ["a.item", { href: "#orders" }, "Objednávky"],
                     ["div.right.menu",
                         ["a.ui.item",
-                            ["span", { onclick: (e: Event) => this.sigLogin.emit() },
+                            ["span", { click: (e: Event) => this.sigLogin.emit() },
                                 this._user ?
                                     ["span", { title: `login: ${this._user.login}` },
                                         this._user.name + (this._user.role === "admin" ? " (admin)" : "")
@@ -100,7 +99,7 @@ class ProductsWidget extends Widget {
         return this;
     }
 
-    render(): JsonMLW {
+    render(): JsonMLs {
         return [
             ["div.products.ui.cards",
                 ...this._products.map(product => {
@@ -117,7 +116,7 @@ class ProductsWidget extends Widget {
                                 ["span.count.right.floated", product.count, " na sklade"]
                             ],
                             ["div.ui.bottom.attached.button", {
-                                onclick: () => this.sigOrderItem.emit({ product: product, count: 1 }) },
+                                click: () => this.sigOrderItem.emit({ product: product, count: 1 }) },
                                 ["i.icon.add.to.cart"],
                                 "Do košíka"
                             ]
@@ -180,7 +179,7 @@ class OrderWidget extends Widget {
         return this;
     }
 
-    render(): JsonMLW {
+    render(): JsonMLs {
         const price = this._orderItems.reduce(
             (sum, order) => sum + order.product.price * order.count,
             0);
@@ -208,11 +207,11 @@ class OrderWidget extends Widget {
                                 ["td.right.aligned", (orderItem.product.price * orderItem.count).toFixed(2), "€"],
                                 ["td.center.aligned",
                                     ["button.ui.button.icon.tiny",
-                                        { onclick: () => this.remove(orderItem).update() },
+                                        { click: () => this.remove(orderItem).update() },
                                         ["i.icon.minus"]
                                     ],
                                     ["button.ui.button.icon.tiny",
-                                        { onclick: () => this.add(orderItem).update() },
+                                        { click: () => this.add(orderItem).update() },
                                         ["i.icon.plus"]
                                     ]
                                 ]
@@ -228,7 +227,7 @@ class OrderWidget extends Widget {
                         ["th.center.aligned",
                             ["button.order.ui.button" + (price ? "" : ".disabled"),
                                 {
-                                    onclick: (e: Event) => {
+                                    click: (e: Event) => {
                                         (e.target as Element).classList.add("loading");
                                         this.sigOrder.emit(
                                             {
@@ -246,7 +245,7 @@ class OrderWidget extends Widget {
             ],
             (this._message ?
                 ["div.ui.message." + this._messageType,
-                    ["i.close.icon", { onclick: () => this.setMessage().update() }],
+                    ["i.close.icon", { click: () => this.setMessage().update() }],
                     ["div.header", this._message]
                     // ["p", "This is a special notification which you can dismiss if you're bored with it."]
                 ] :
@@ -267,7 +266,7 @@ class OrdersStatsWidget extends Widget {
         return this;
     }
 
-    render(): JsonMLW {
+    render(): JsonMLs {
         const orders = this._orders;
         const sum = orders.map(o => o.price).reduce((sum, price) => sum + price, 0);
         const count = orders.map(o => o.count).reduce((sum, count) => sum + count, 0);
@@ -310,7 +309,7 @@ class OrdersWidget extends Widget {
         return this;
     }
 
-    render(): JsonMLW {
+    render(): JsonMLs {
         return [
             ["table.orders.ui.table.selectable.compact",
                 ["thead",
@@ -374,7 +373,7 @@ class App extends Widget {
         this._initOrders();
     }
 
-    render(): JsonMLW {
+    render(): JsonMLs {
         return [
             ["div.ui.container",
                 this._menuWidget
@@ -509,4 +508,4 @@ class App extends Widget {
 
 
 
-new App().update("app");
+new App().update(document.getElementById("app"));
