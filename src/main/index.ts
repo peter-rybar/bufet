@@ -7,6 +7,20 @@ export const version: string = "@VERSION@";
 
 
 
+window.onerror = function (message, source, lineno, colno, error) {
+    http.post("jserr")
+        .send({
+            source: source,
+            message: message,
+            lineno: lineno,
+            colno: colno,
+            error: error,
+            error_stack: (<any>error).stack
+        });
+};
+
+
+
 interface User {
     login: string;
     name: number;
@@ -151,9 +165,9 @@ class OrderWidget extends Widget {
 
     add(orderItem: OrderItem): this {
         const found = this._orderItems
-            .find(o => o.product.code === orderItem.product.code);
-        if (found) {
-            found.count++;
+            .filter(o => o.product.code === orderItem.product.code);
+        if (found.length) {
+            found[0].count++;
         } else {
             this._orderItems.push(orderItem);
         }
@@ -162,10 +176,10 @@ class OrderWidget extends Widget {
 
     remove(orderItem: OrderItem): this {
         const found = this._orderItems
-            .find(o => o.product.code === orderItem.product.code);
-        if (found) {
-            if (found.count > 1) {
-                found.count--;
+            .filter(o => o.product.code === orderItem.product.code);
+        if (found.length) {
+            if (found[0].count > 1) {
+                found[0].count--;
             } else {
                 this._orderItems = this._orderItems
                     .filter(o => o.product.code !== orderItem.product.code);

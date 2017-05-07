@@ -240,6 +240,16 @@ if (cluster.isMaster && process.env.NODE_ENV === 'production') {
         }
     });
 
+    app.post('/jserr', jsonParser, function (req, res) {
+        console.log('jserr post', req.params, req.query);
+        for (var k in req.body) {
+            if (req.body.hasOwnProperty(k)) {
+                console.log("\t", k, req.body[k]);
+            }
+        }
+        res.send("");
+    });
+
 
     app.use(express.static(path.join(__dirname, '../static')));
     app.use('/node_modules', express.static(path.join(__dirname, '../node_modules')));
