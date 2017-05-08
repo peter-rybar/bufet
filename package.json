@@ -23,9 +23,10 @@
     "test:watch": "node ./node_modules/karma-cli/bin/karma start ./karma.conf.js",
     "clean": "rimraf build; rimraf dist",
     "clean:all": "npm run clean; rimraf node_modules; rimraf typings",
-    "pm2": "NODE_ENV=production pm2",
-    "server": "NODE_ENV=production pm2 start server/app.js -i 0",
-    "server:watch": "nodemon --watch server --watch build/main --watch dist server/app.js"
+    "server:watch": "nodemon --watch server --watch build/main --watch dist server/app.js",
+    "server:cluster": "NODE_ENV=production node server/cluster.js",
+    "server:pm2": "NODE_ENV=production pm2 start server/app.js -i 0 --name bufet",
+    "pm2": "NODE_ENV=production pm2"
   },
   "pre-commit": [
     "dist"
