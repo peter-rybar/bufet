@@ -12,41 +12,25 @@ var db = new tingodb.Db(dbdir, {});
 var usersCollection = db.collection("users");
 usersCollection.remove({},
     function(err, res) {
-        if (err) {
-            console.log(err);
-            throw err;
-        } else {
-            console.log("users remove", res);
-        }
+        if (err) throw err;
+        console.log("users remove", res);
     });
 usersCollection.insert(require('./data/users'),
     function (err, res) {
-        if (err) {
-            console.log(err);
-            throw err;
-        } else {
-            console.log("users insert", res);
-        }
+        if (err) throw err;
+        console.log("users insert", res);
     });
 
 var productsCollection = db.collection("products");
 productsCollection.remove({},
     function(err, res) {
-        if (err) {
-            console.log(err);
-            throw err;
-        } else {
-            console.log("products remove", res);
-        }
+        if (err) throw err;
+        console.log("products remove", res);
     });
 productsCollection.insert(require('./data/products'),
     function (err, res) {
-        if (err) {
-            console.log(err);
-            throw err;
-        } else {
-            console.log("products insert", res);
-        }
+        if (err) throw err;
+        console.log("products insert", res);
     });
 
 
@@ -69,7 +53,7 @@ var authBasic = basicAuth({
         db.collection("users").findOne({login: username},
             function (err, user) {
                 if (err) {
-                    console.log(err);
+                    console.error(err);
                     cb(null, false);
                 } else {
                     var auth = user && user.password === password;
@@ -94,53 +78,44 @@ app.get('/', function (req, res) {
 //     res.send('Hello World!')
 // });
 
-app.get('/products', function (req, res) {
+app.get('/products', function (req, res, next) {
     console.log('products get', req.params, req.query);
     db.collection("products").find()/*.sort({price: 1})*/.toArray(
         function (err, products) {
-            if (err) {
-                console.log(err);
-            } else {
-                res.json({products: products});
-            }
+            if (err) return next(err);
+            res.json({products: products});
         });
 });
 
-app.get('/product/:code', function (req, res) {
+app.get('/product/:code', function (req, res, next) {
     console.log('product get', req.params, req.query);
     db.collection("products").findOne({code: req.params.code},
         function (err, product) {
-            if (err) {
-                console.log(err);
+            if (err) return next(err);
+            if (product) {
+                res.json({product: product});
             } else {
-                if (product) {
-                    res.json({product: product});
-                } else {
-                    res.sendStatus(404); // Not Found
-                }
+                res.sendStatus(404); // Not Found
             }
         });
 });
 
-app.get('/user', authBasic, function (req, res) {
+app.get('/user', authBasic, function (req, res, next) {
     console.log('user get', req.params, req.query);
     if (req.auth) {
         db.collection("users").findOne({login: req.auth.user},
             function (err, user) {
-                if (err) {
-                    console.log(err);
+                if (err) return next(err);
+                if (user) {
+                    res.json({
+                        user: {
+                            login: user.login,
+                            name: user.name,
+                            role: user.role
+                        }
+                    });
                 } else {
-                    if (user) {
-                        res.json({
-                            user: {
-                                login: user.login,
-                                name: user.name,
-                                role: user.role
-                            }
-                        });
-                    } else {
-                        res.sendStatus(404); // Not Found
-                    }
+                    res.sendStatus(404); // Not Found
                 }
             });
     } else {
@@ -148,128 +123,98 @@ app.get('/user', authBasic, function (req, res) {
     }
 });
 
-app.get('/orders', authBasic, function (req, res) {
+app.get('/orders', authBasic, function (req, res, next) {
     console.log('orders get', req.params, req.query, req.body);
-
     var userOrdersCollection = 'orders_' + req.auth.user;
-
     db.collection(userOrdersCollection).find().toArray(
         function (err, orders) {
-            if (err) {
-                console.log(err);
-                res.sendStatus(404); // Not Found
-            } else {
-                console.log(userOrdersCollection, orders);
-                res.json({orders: orders});
-            }
+            if (err) return next(err);
+            res.json({orders: orders});
         });
 });
 
-app.get('/orders/:login', authBasic, function (req, res) {
+app.get('/orders/:login', authBasic, function (req, res, next) {
     console.log('orders get', req.params, req.query, req.body);
-
     db.collection("users").findOne({login: req.auth.user},
         function (err, user) {
-            if (err) {
-                console.log(err);
-                res.sendStatus(404); // Not Found
+            if (err) return next(err);
+            if (req.params.login && user.role === "admin") {
+                var userOrdersCollection = 'orders_' + req.params.login;
+                db.collection(userOrdersCollection).find().toArray(
+                    function (err, orders) {
+                        if (err) return next(err);
+                        console.log(userOrdersCollection, orders);
+                        const sum = orders
+                            .map(function (o) {
+                                return o.price;
+                            })
+                            .reduce(function (sum, price) {
+                                return sum + price;
+                            }, 0);
+                        const count = orders
+                            .map(function (o) {
+                                return o.count;
+                            })
+                            .reduce(function (sum, count) {
+                                return sum + count;
+                            }, 0);
+                        var sumar = sum.toFixed(2) + ' € ' + count + '\n\n';
+                        sumar += orders
+                            .map(function (o) {
+                                return '\n' + o.price.toFixed(2) + ' €\t' +
+                                    o.count + '\t' +
+                                    o.timestamp + '\n' +
+                                    o.items
+                                        .map(function (i) {
+                                            return i.product.price.toFixed(2) + ' €\t' +
+                                                i.count + '\t' + i.product.code;
+                                        })
+                                        .join('\n');
+                            })
+                            .join('\n');
+                        res.contentType("text/plain");
+                        res.send(sumar);
+                        // res.send(JSON.stringify({
+                        //     sum: sum,
+                        //     count: count,
+                        //     orders: orders}, null, 4));
+                    });
             } else {
-                if (req.params.login && user.role === "admin") {
-                    var userOrdersCollection = 'orders_' + req.params.login;
-
-                    db.collection(userOrdersCollection).find().toArray(
-                        function (err, orders) {
-                            if (err) {
-                                console.log(err);
-                                res.sendStatus(404); // Not Found
-                            } else {
-                                console.log(userOrdersCollection, orders);
-                                const sum = orders
-                                    .map(function (o) {
-                                        return o.price;
-                                    })
-                                    .reduce(function (sum, price) {
-                                        return sum + price;
-                                    }, 0);
-                                const count = orders
-                                    .map(function (o) {
-                                        return o.count;
-                                    })
-                                    .reduce(function (sum, count) {
-                                        return sum + count;
-                                    }, 0);
-                                var sumar = sum.toFixed(2) + ' € ' + count + '\n\n';
-                                sumar += orders
-                                    .map(function (o) {
-                                        return '\n' + o.price.toFixed(2) + ' €\t' +
-                                            o.count + '\t' +
-                                            o.timestamp + '\n' +
-                                            o.items
-                                                .map(function (i) {
-                                                    return i.product.price.toFixed(2) + ' €\t' +
-                                                        i.count + '\t' + i.product.code;
-                                                })
-                                                .join('\n');
-                                    })
-                                    .join('\n');
-                                res.contentType("text/plain");
-                                res.send(sumar);
-                                // res.send(JSON.stringify({
-                                //     sum: sum,
-                                //     count: count,
-                                //     orders: orders}, null, 4));
-                            }
-                        });
-                } else {
-                    res.sendStatus(404); // Not Found
-                }
+                res.sendStatus(404); // Not Found
             }
         });
 });
 
-app.post('/order', authBasic, jsonParser, function (req, res) {
+app.post('/order', authBasic, jsonParser, function (req, res, next) {
     console.log('order post', req.params, req.query, req.body);
     var order = req.body;
-    // TODO check order posibiliti
     order.timestamp = new Date().toISOString();
-
     var userOrdersCollection = 'orders_' + req.auth.user;
-
     var collection = db.collection(userOrdersCollection);
     collection.insert([order],
         function (err, orders) {
-            if (err) {
-                console.log(err);
-                res.sendStatus(404); // Not Found
-            } else {
-                console.log(userOrdersCollection, orders);
-                collection.find().toArray(
-                    function (err, orders) {
-                        if (err) {
-                            console.log(err);
-                            res.sendStatus(404); // Not Found
-                        } else {
-                            console.log(userOrdersCollection, orders);
-                            res.json({orders: orders});
-                        }
-                    });
-            }
+            if (err) return next(err);
+            console.log(userOrdersCollection, orders);
+            collection.find().toArray(
+                function (err, orders) {
+                    if (err) {
+                        console.log(err);
+                        res.sendStatus(404); // Not Found
+                    } else {
+                        console.log(userOrdersCollection, orders);
+                        res.json({orders: orders});
+                    }
+                });
         });
 });
 
-app.get('/order/:id', authBasic, function (req, res) {
+app.get('/order/:id', authBasic, function (req, res, next) {
     console.log('order get', req.params, req.query);
-
     var userOrdersCollection = 'orders_' + req.auth.user;
-
     db.collection(userOrdersCollection).findOne({_id: req.params.id},
         function (err, order) {
-            if (err) {
-                console.log(err);
-                res.sendStatus(404); // Not Found
-            } else {
-                res.json({order: order});
-            }
+            if (err) return next(err);
+            res.json({order: order});
         });
 });
 
