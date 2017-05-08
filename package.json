@@ -23,7 +23,8 @@
     "test:watch": "node ./node_modules/karma-cli/bin/karma start ./karma.conf.js",
     "clean": "rimraf build; rimraf dist",
     "clean:all": "npm run clean; rimraf node_modules; rimraf typings",
-    "server": "NODE_ENV=production node server/app.js",
+    "pm2": "NODE_ENV=production pm2",
+    "server": "NODE_ENV=production pm2 start server/app.js -i 0",
     "server:watch": "nodemon --watch server --watch build/main --watch dist server/app.js"
   },
   "pre-commit": [
@@ -70,10 +71,11 @@
   },
   "dependencies": {
     "body-parser": "^1.17.1",
-    "diskdb": "^0.1.17",
     "express": "^4.15.2",
     "express-basic-auth": "^1.0.1",
     "incremental-dom": "^0.5.1",
-    "semantic-ui-css": "^2.2.10"
+    "pm2": "^2.4.6",
+    "semantic-ui-css": "^2.2.10",
+    "tingodb": "^0.5.1"
   }
 }

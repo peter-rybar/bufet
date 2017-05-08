@@ -26,45 +26,51 @@ if (cluster.isMaster && process.env.NODE_ENV === 'production') {
     var express = require('express');
     var bodyParser = require('body-parser');
     var basicAuth = require('express-basic-auth');
-    var db = require('diskdb');
 
 
+    var tingodb = require('tingodb')();
     var dbdir = __dirname + '/../db';
-    db = db.connect(dbdir, ['users', 'products'/*, 'orders'*/]);
-    db.users.remove();
-    db.loadCollections(['users']);
-    var users = require('./users');
-    db.users.save(users);
-    if (!db.products.count()) {
-        db.products.save([
-            {
-                code: 'keksik',
-                title: 'Keksík',
-                description: 'Keksík chutný',
-                price: 7.3,
-                count: 7,
-                sold: 0
-            },
-            {
-                code: 'kolacik',
-                title: 'Koláčik',
-                description: 'Koláčik skvelý',
-                price: 2.3,
-                count: 3,
-                sold: 0
-            },
-            {
-                code: 'cokoladka',
-                title: 'Čokoládka',
-                description: 'Čokoládka sladká',
-                price: 1.2,
-                count: 5,
-                sold: 0
+    var db = new tingodb.Db(dbdir, {});
+
+    var usersCollection = db.collection("users");
+    usersCollection.remove({},
+        function(err, res) {
+            if (err) {
+                console.log(err);
+                throw err;
+            } else {
+                console.log("users remove", res);
             }
-        ]);
-    }
-    // var u = db.users.findOne({login: 'peter'});
-    // console.log(u);
+        });
+    usersCollection.insert(require('./users'),
+        function (err, res) {
+            if (err) {
+                console.log(err);
+                throw err;
+            } else {
+                console.log("users insert", res);
+            }
+        });
+
+    var productsCollection = db.collection("products");
+    productsCollection.remove({},
+        function(err, res) {
+            if (err) {
+                console.log(err);
+                throw err;
+            } else {
+                console.log("products remove", res);
+            }
+        });
+    productsCollection.insert(require('./products'),
+        function (err, res) {
+            if (err) {
+                console.log(err);
+                throw err;
+            } else {
+                console.log("products insert", res);
+            }
+        });
 
 
     var app = express();
@@ -81,22 +87,22 @@ if (cluster.isMaster && process.env.NODE_ENV === 'production') {
     // app.use(textParser);
 
     var authBasic = basicAuth({
-        // users: {
-        //     'admin': 'rybar'
-        // },
-        authorizer: function (username, password) {
-            var user = db.users.findOne({login: username});
-            var auth = user && user.password === password;
-            console.log("auth: ", username, password, user);
-            return auth;
+        authorizeAsync: true,
+        authorizer: function (username, password, cb) {
+            db.collection("users").findOne({login: username},
+                function (err, user) {
+                    if (err) {
+                        console.log(err);
+                        cb(null, false);
+                    } else {
+                        var auth = user && user.password === password;
+                        console.log("auth: ", username, password, user);
+                        cb(null, auth);
+                    }
+                });
         },
         challenge: true,
         realm: 'Imb4T3st4pp'
-        // unauthorizedResponse: function (req) {
-        //     return req.auth ?
-        //         ('Credentials ' + req.auth.user + ':' + req.auth.password + ' rejected') :
-        //         'No credentials provided'
-        // }
     });
     // app.use(authBasic);
 
@@ -113,30 +119,53 @@ if (cluster.isMaster && process.env.NODE_ENV === 'production') {
 
     app.get('/products', function (req, res) {
         console.log('products get', req.params, req.query);
-        res.json({products: db.products.find()});
+        db.collection("products").find()/*.sort({price: 1})*/.toArray(
+            function (err, products) {
+                if (err) {
+                    console.log(err);
+                } else {
+                    res.json({products: products});
+                }
+            });
     });
 
-    app.get('/product/:id', function (req, res) {
+    app.get('/product/:code', function (req, res) {
         console.log('product get', req.params, req.query);
-        var product = db.products.findOne({id: req.params.id});
-        if (product) {
-            res.json({product: product});
-        } else {
-            res.sendStatus(404); // Not Found
-        }
+        db.collection("products").findOne({code: req.params.code},
+            function (err, product) {
+                if (err) {
+                    console.log(err);
+                } else {
+                    if (product) {
+                        res.json({product: product});
+                    } else {
+                        res.sendStatus(404); // Not Found
+                    }
+                }
+            });
     });
 
     app.get('/user', authBasic, function (req, res) {
         console.log('user get', req.params, req.query);
         if (req.auth) {
-            var user = db.users.findOne({login: req.auth.user});
-            res.json({
-                user: {
-                    login: user.login,
-                    name: user.name,
-                    role: user.role
-                }
-            });
+            db.collection("users").findOne({login: req.auth.user},
+                function (err, user) {
+                    if (err) {
+                        console.log(err);
+                    } else {
+                        if (user) {
+                            res.json({
+                                user: {
+                                    login: user.login,
+                                    name: user.name,
+                                    role: user.role
+                                }
+                            });
+                        } else {
+                            res.sendStatus(404); // Not Found
+                        }
+                    }
+                });
         } else {
             res.sendStatus(404); // Not Found
         }
@@ -146,69 +175,79 @@ if (cluster.isMaster && process.env.NODE_ENV === 'production') {
         console.log('orders get', req.params, req.query, req.body);
 
         var userOrdersCollection = 'orders_' + req.auth.user;
-        if (!(userOrdersCollection in db)) {
-            db.loadCollections([userOrdersCollection]);
-        }
-        var orders = db[userOrdersCollection].find();
 
-        if (orders) {
-            res.json({orders: orders});
-        } else {
-            res.sendStatus(404); // Not Found
-        }
+        db.collection(userOrdersCollection).find().toArray(
+            function (err, orders) {
+                if (err) {
+                    console.log(err);
+                    res.sendStatus(404); // Not Found
+                } else {
+                    console.log(userOrdersCollection, orders);
+                    res.json({orders: orders});
+                }
+            });
     });
 
-    app.get('/orders/:userId', authBasic, function (req, res) {
+    app.get('/orders/:login', authBasic, function (req, res) {
         console.log('orders get', req.params, req.query, req.body);
-        var user = db.users.findOne({login: req.auth.user});
-        if (req.params.userId && user.role === "admin") {
-            var userOrdersCollection = 'orders_' + req.params.userId;
-            if (!(userOrdersCollection in db)) {
-                db.loadCollections([userOrdersCollection]);
-            }
-            var orders = db[userOrdersCollection].find();
 
-            if (orders) {
-                const sum = orders
-                    .map(function (o) {
-                        return o.price;
-                    })
-                    .reduce(function (sum, price) {
-                        return sum + price;
-                    }, 0);
-                const count = orders
-                    .map(function (o) {
-                        return o.count;
-                    })
-                    .reduce(function (sum, count) {
-                        return sum + count;
-                    }, 0);
-                var sumar = sum.toFixed(2) + ' € ' + count + '\n\n';
-                sumar += orders
-                    .map(function (o) {
-                        return '\n' + o.price.toFixed(2) + ' €\t' +
-                            o.count + '\t' +
-                            o.timestamp + '\n' +
-                            o.items
-                                .map(function (i) {
-                                    return i.product.price.toFixed(2) + ' €\t' +
-                                        i.count + '\t' + i.product.code;
-                                })
-                                .join('\n');
-                    })
-                    .join('\n');
-                res.contentType("text/plain");
-                res.send(sumar);
-                // res.send(JSON.stringify({
-                //     sum: sum,
-                //     count: count,
-                //     orders: orders}, null, 4));
-            } else {
-                res.sendStatus(404); // Not Found
-            }
-        } else {
-            res.sendStatus(404); // Not Found
-        }
+        db.collection("users").findOne({login: req.auth.user},
+            function (err, user) {
+                if (err) {
+                    console.log(err);
+                    res.sendStatus(404); // Not Found
+                } else {
+                    if (req.params.login && user.role === "admin") {
+                        var userOrdersCollection = 'orders_' + req.params.login;
+
+                        db.collection(userOrdersCollection).find().toArray(
+                            function (err, orders) {
+                                if (err) {
+                                    console.log(err);
+                                    res.sendStatus(404); // Not Found
+                                } else {
+                                    console.log(userOrdersCollection, orders);
+                                    const sum = orders
+                                        .map(function (o) {
+                                            return o.price;
+                                        })
+                                        .reduce(function (sum, price) {
+                                            return sum + price;
+                                        }, 0);
+                                    const count = orders
+                                        .map(function (o) {
+                                            return o.count;
+                                        })
+                                        .reduce(function (sum, count) {
+                                            return sum + count;
+                                        }, 0);
+                                    var sumar = sum.toFixed(2) + ' € ' + count + '\n\n';
+                                    sumar += orders
+                                        .map(function (o) {
+                                            return '\n' + o.price.toFixed(2) + ' €\t' +
+                                                o.count + '\t' +
+                                                o.timestamp + '\n' +
+                                                o.items
+                                                    .map(function (i) {
+                                                        return i.product.price.toFixed(2) + ' €\t' +
+                                                            i.count + '\t' + i.product.code;
+                                                    })
+                                                    .join('\n');
+                                        })
+                                        .join('\n');
+                                    res.contentType("text/plain");
+                                    res.send(sumar);
+                                    // res.send(JSON.stringify({
+                                    //     sum: sum,
+                                    //     count: count,
+                                    //     orders: orders}, null, 4));
+                                }
+                            });
+                    } else {
+                        res.sendStatus(404); // Not Found
+                    }
+                }
+            });
     });
 
     app.post('/order', authBasic, jsonParser, function (req, res) {
@@ -218,26 +257,43 @@ if (cluster.isMaster && process.env.NODE_ENV === 'production') {
         order.timestamp = new Date().toISOString();
 
         var userOrdersCollection = 'orders_' + req.auth.user;
-        if (!(userOrdersCollection in db)) {
-            db.loadCollections([userOrdersCollection]);
-        }
-        order = db[userOrdersCollection].save(order);
 
-        if (order) {
-            res.json({order: order});
-        } else {
-            res.sendStatus(404); // Not Found
-        }
+        var collection = db.collection(userOrdersCollection);
+        collection.insert([order],
+            function (err, orders) {
+                if (err) {
+                    console.log(err);
+                    res.sendStatus(404); // Not Found
+                } else {
+                    console.log(userOrdersCollection, orders);
+                    collection.find().toArray(
+                        function (err, orders) {
+                            if (err) {
+                                console.log(err);
+                                res.sendStatus(404); // Not Found
+                            } else {
+                                console.log(userOrdersCollection, orders);
+                                res.json({orders: orders});
+                            }
+                        });
+                }
+            });
     });
 
     app.get('/order/:id', authBasic, function (req, res) {
         console.log('order get', req.params, req.query);
-        var order = db.products.findOne({_id: req.params.id});
-        if (order) {
-            res.json({order: order});
-        } else {
-            res.sendStatus(404); // Not Found
-        }
+
+        var userOrdersCollection = 'orders_' + req.auth.user;
+
+        db.collection(userOrdersCollection).findOne({_id: req.params.id},
+            function (err, order) {
+                if (err) {
+                    console.log(err);
+                    res.sendStatus(404); // Not Found
+                } else {
+                    res.json({order: order});
+                }
+            });
     });
 
     app.post('/jserr', jsonParser, function (req, res) {

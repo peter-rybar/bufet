@@ -108,7 +108,7 @@ class ProductsWidget extends Widget {
         return this;
     }
 
-    onSigOrder(slot: (o: OrderItem) => void): this {
+    onSigOrderItem(slot: (o: OrderItem) => void): this {
         this.sigOrderItem.connect(slot);
         return this;
     }
@@ -456,7 +456,7 @@ class App extends Widget {
 
     private _initProducts(): void {
         this._productsWidget = new ProductsWidget()
-            .onSigOrder(order => {
+            .onSigOrderItem(order => {
                 if (this._user) {
                     this._orderWidget.add(order).update();
                 } else {
