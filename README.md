@@ -1,6 +1,6 @@
 # Bufet
 
-VECTARY engine core prototype project.
+Bufet project.
 
 ## Development environment setup
 
@@ -25,3 +25,11 @@ VECTARY engine core prototype project.
 ## Clean all project
 
 `npm run clean:all`
+
+## Run development server
+
+`npm run server:watch`
+
+## Run production server
+
+`npm run server:cluster`
