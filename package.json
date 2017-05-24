@@ -1,15 +1,13 @@
 {
   "name": "bufet",
   "version": "0.0.0",
-  "description": "vectary engine prototype",
-  "contributors": [
-    {
-      "name": "Peter Rybar",
-      "email": "rybar@vectary.com",
-      "url": ""
-    }
-  ],
-  "private": true,
+  "description": "bufet app",
+  "author": {
+    "name": "Peter Rybar",
+    "email": "pr.rybar@gmail.com",
+    "url": "http://prest-tech.appspot.com/peter-rybar"
+  },
+  "private": false,
   "license": "GPL-3.0",
   "main": "index.js",
   "scripts": {
@@ -36,12 +34,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@bitbucket.org/vectary3d/bufet.git"
+    "url": "https://github.com/peter-rybar/bufet.git"
   },
   "keywords": [
-    "VECTARY",
-    "3D",
-    "prototype"
+    "bufet",
+    "shop",
+    "jsonml",
+    "widget",
+    "typescript"
   ],
   "devDependencies": {
     "@types/assertion-error": "^1.0.30",
