@@ -6,9 +6,9 @@ var users = [
         role: "admin"
     },
     {
-        login: 'sovis',
-        password: 'pavol',
-        name: 'Pavol Soviš',
+        login: 'peter',
+        password: 'peter',
+        name: 'Peter',
         role: "user"
     }
 ];
