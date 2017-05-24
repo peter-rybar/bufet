@@ -522,4 +522,4 @@ class App extends Widget {
 
 
 
-new App().update(document.getElementById("app"));
+new App().mount(document.getElementById("app"));

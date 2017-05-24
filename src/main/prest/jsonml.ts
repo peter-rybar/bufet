@@ -101,28 +101,21 @@ class JsonmlHtmlHandler implements JsonMLHandler {
 
     open(tag: string, attrs: Attrs, widget?: Widget): boolean {
         const props: any[] = [];
-        let id: string;
-        let classes: string[];
+        let id: string = attrs._id;
+        let classes: string[] = attrs._classes ? attrs._classes : [];
         for (const a in attrs) {
             if (attrs.hasOwnProperty(a)) {
                 switch (a) {
+                    case "_id":
+                    case "_classes":
                     case "_ref":
                     case "_key":
                     case "_skip":
                         break;
-                    case "_id":
+                    case "id":
                         id = attrs[a];
                         break;
-                    case "_classes":
-                        if (!classes) {
-                            classes = [];
-                        }
-                        classes = classes.concat(attrs[a]);
-                        break;
                     case "classes":
-                        if (!classes) {
-                            classes = [];
-                        }
                         classes = classes.concat(attrs[a]);
                         break;
                     case "data":
@@ -157,7 +150,7 @@ class JsonmlHtmlHandler implements JsonMLHandler {
             this.html +=  this.indent.repeat(this.depth);
             this.depth++;
         }
-        if (classes) {
+        if (classes.length) {
             props.unshift(["class", classes.join(" ")]);
         }
         if (id) {
@@ -213,31 +206,21 @@ class JsonmlDomHandler implements JsonMLHandler {
 
     open(tag: string, attrs: Attrs, widget?: Widget): boolean {
         const e = document.createElement(tag);
-        let classes: string[];
+        let id: string = attrs._id;
+        let classes: string[] = attrs._classes ? attrs._classes : [];
         for (const a in attrs) {
             if (attrs.hasOwnProperty(a)) {
                 switch (a) {
+                    case "_id":
+                    case "_classes":
+                    case "_ref":
                     case "_key":
                     case "_skip":
                         break;
-                    case "_id":
-                        e.setAttribute("id", attrs[a]);
-                        break;
-                    case "_ref":
-                        if (widget) {
-                            widget.refs[attrs[a]] = e;
-                        }
-                        break;
-                    case "_classes":
-                        if (!classes) {
-                            classes = [];
-                        }
-                        classes = classes.concat(attrs[a]);
+                    case "id":
+                        id = attrs[a];
                         break;
                     case "classes":
-                        if (!classes) {
-                            classes = [];
-                        }
                         classes = classes.concat(attrs[a]);
                         break;
                     case "data":
@@ -267,7 +250,10 @@ class JsonmlDomHandler implements JsonMLHandler {
                 }
             }
         }
-        if (classes) {
+        if (id) {
+            e.setAttribute("id", id);
+        }
+        if (classes.length) {
             e.classList.add(...classes);
         }
         if (this._current) {
@@ -309,31 +295,22 @@ class JsonmlIDomHandler implements JsonMLHandler {
 
     open(tag: string, attrs: Attrs, widget?: Widget): boolean {
         const props: any = [];
-        let id: string;
-        let ref: string;
-        let classes: string[];
+        let id: string = attrs._id;
+        let classes: string[] = attrs._classes ? attrs._classes : [];
+        let ref: string = attrs._ref;
         for (const a in attrs) {
             if (attrs.hasOwnProperty(a)) {
                 switch (a) {
+                    case "_id":
+                    case "_classes":
+                    case "_ref":
                     case "_key":
                     case "_skip":
                         break;
-                    case "_id":
+                    case "id":
                         id = attrs[a];
                         break;
-                    case "_ref":
-                        ref = attrs[a];
-                        break;
-                    case "_classes":
-                        if (!classes) {
-                            classes = [];
-                        }
-                        classes = classes.concat(attrs[a]);
-                        break;
                     case "classes":
-                        if (!classes) {
-                            classes = [];
-                        }
                         classes = classes.concat(attrs[a]);
                         break;
                     case "data":
@@ -359,7 +336,7 @@ class JsonmlIDomHandler implements JsonMLHandler {
                 }
             }
         }
-        if (classes) {
+        if (classes.length) {
             props.unshift("class", classes.join(" "));
         }
         if (id) {
@@ -389,14 +366,14 @@ class JsonmlIDomHandler implements JsonMLHandler {
 
 }
 
-export function jsonml2idom(markup: JsonML, widget?: Widget): void {
+function jsonml2idom(markup: JsonML, widget?: Widget): void {
     jsonml(markup, new JsonmlIDomHandler(), widget);
 }
 
 
 export type JsonMLs = Array<JsonML | Widget>;
 
-export function jsonmls2idom(jsonmls: JsonMLs, widget?: Widget) {
+function jsonmls2idom(jsonmls: JsonMLs, widget?: Widget): void {
     for (const jsonml of jsonmls) {
         if (jsonml instanceof Widget) {
             const w = jsonml as Widget;
@@ -408,18 +385,18 @@ export function jsonmls2idom(jsonmls: JsonMLs, widget?: Widget) {
 }
 
 
-export function patch(node: Node, jsonml: JsonML,  widget?: Widget) {
+export function patch(node: Node, jsonml: JsonML,  widget?: Widget): void {
     IncrementalDOM.patch(node,
         (data: JsonML) => jsonml2idom(data, widget), jsonml);
 }
 
-export function patchAll(node: Node, jsonmls: JsonMLs,  widget?: Widget) {
+export function patchAll(node: Node, jsonmls: JsonMLs,  widget?: Widget): void {
     IncrementalDOM.patch(node,
         (data: JsonMLs) => jsonmls2idom(data, widget), jsonmls);
 }
 
 
-interface DomWidget {
+export interface DomWidget {
     domAttach?(): void;
     domDetach?(): void;
 }
@@ -428,30 +405,42 @@ export abstract class Widget implements DomWidget {
 
     private static __count = 0;
 
-    readonly type = this.constructor.name;
-    readonly id = this.constructor.name + "-" + Widget.__count++;
+    readonly type = "Widget"; // this.constructor.name;
+    readonly id = this.type + "-" + Widget.__count++;
     readonly dom: HTMLElement;
     readonly refs: { [key: string]: HTMLElement } = {};
 
     abstract render(): JsonMLs;
 
-    update(node?: Node): this {
-        const e = node || this.dom;
+    mount(e: HTMLElement): this {
+        if (!this.dom) {
+            (this as any).dom = e;
+            const jsonMLs = (this as any).render();
+            patchAll(e, jsonMLs, this);
+            if ((this as any).domAttach) {
+                (this as any).domAttach();
+            }
+            onDetach(e, () => {
+                (this as any).dom = undefined;
+                if ((this as any).domDetach) {
+                    (this as any).domDetach();
+                }
+            });
+        }
+        return this;
+    }
+
+    update(): this {
+        const e = this.dom;
         if (e) {
             patchAll(e, this.render(), this);
-        } else {
-            console.warn("no element for id: ", this.id);
         }
         return this;
     }
 
     renderJsonML(): JsonML {
         const jsonMLs = (this as any).render();
-        return [
-            this.constructor.name, {
-                _id: this.id,
-                _key: this.id
-            },
+        return [this.type, { _id: this.id, _key: this.id },
             ...jsonMLs,
             (e: HTMLElement) => {
                 if (!this.dom) {
@@ -459,24 +448,32 @@ export abstract class Widget implements DomWidget {
                     if ((this as any).domAttach) {
                         (this as any).domAttach();
                     }
-                    new MutationObserver(mutations => {
-                        mutations.forEach(mutation => {
-                            const removed = mutation.removedNodes as any;
-                            for (const r of removed) {
-                                if (r.id === this.id) {
-                                    (this as any).dom = undefined;
-                                    if ((this as any).domDetach) {
-                                        (this as any).domDetach();
-                                    }
-                                }
-                            }
-                        });
-                    }).observe(e.parentElement, { childList: true });
+                    onDetach(e, () => {
+                        (this as any).dom = undefined;
+                        if ((this as any).domDetach) {
+                            (this as any).domDetach();
+                        }
+                    });
                 }
             }
         ];
     }
 
+}
+
+function onDetach(e: HTMLElement, callback: () => void) {
+    new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            const removed = mutation.removedNodes as any;
+            for (const r of removed) {
+                console.log(r, r === e);
+                if (r === e) {
+                    callback();
+                }
+            }
+        });
+    }).observe(e.parentElement, { childList: true });
+    // }).observe(e.parentElement, { childList: true, subtree: true });
 }
 
 
