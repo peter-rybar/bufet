@@ -28,6 +28,7 @@ export interface Product {
     price_purchase: number;
     count: number;
     sold: number;
+    alert_low: number;
 }
 /**
  * Store the history of purchased for tracking the prices etc

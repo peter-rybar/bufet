@@ -1,6 +1,178 @@
-import {Signal} from "signal";
+import {Signal} from "../prest/signal";
 import {User, Order, OrderItem, Product} from "interfaces";
-import {Widget, JsonMLs} from "jsonml";
+import {Widget, JsonMLs} from "../prest/jsonml";
+import {Form} from "../prest/form";
+/*
+ export class ProductForm extends Widget {
+ private _product: Product = null;
+
+ setProduct(product: Product): this {
+ this._product = product;
+ this.update();
+ return this;
+ }
+
+ render(): JsonMLs {
+ return [];
+ }
+ }
+ */
+export class ProductsTable extends Widget {
+    private _products: Product[] = [];
+    /*
+     private _productForms: ProductForm[] = [];
+     */
+
+    setProducts(products: Product[]): this {
+        this._products = products;
+        /*
+         for (let p in products) {
+         let f = new ProductForm();
+         f.setProduct(products[p]);
+         this._productForms[p] = f;
+         }
+         */
+        this.update();
+        return this;
+    }
+
+    render(): JsonMLs {
+        let t_expenses = 0;
+        let t_takings = 0
+        let t_diff = 0;
+        let t_profit = 0;
+
+        return [["table.products.ui.celled.table",
+            ["thead",
+                ["tr",
+                    ["th", "Product"],
+                    ["th", "Items on stock"],
+                    ["th", "Items sold"],
+                    ["th", "Purchase unit price"],
+                    ["th", "Sell unit price"],
+                    ["th", "Expenses"],
+                    ["th", "Takings"],
+                    ["th", "Expenses vs Takings"],
+                    ["th", "Profit"],
+                    ["th", " "]
+                ]
+            ],
+            ["tbody",
+                ...this._products.map(product => {
+                    let expenses = (product.sold + product.count) * product.price_purchase;
+                    let takings = product.sold * product.price;
+                    let diff = takings - expenses;
+                    let profit = takings - (product.sold * product.price_purchase);
+                    t_expenses += expenses;
+                    t_takings += takings;
+                    t_diff += diff;
+                    t_profit += profit;
+                    return (
+                        [
+                            "tr" + (product.count === 0 ? ".error" : product.count <= product.alert_low ? ".warning" : ""),
+                            ["td", product.title],
+                            ["td", product.count],
+                            ["td", product.sold],
+                            ["td", product.price_purchase.toFixed(2)],
+                            ["td", product.price.toFixed(2)],
+                            ["td", expenses.toFixed(2)],
+                            ["td", takings.toFixed(2)],
+                            ["td", diff.toFixed(2)],
+                            ["td", profit.toFixed(2)],
+                            ["td", " "]
+                        ]);
+                })
+            ],
+            ["tfoot",
+                ["tr",
+                    ["th", ["strong", "Summary"]],
+                    ["th", " "],
+                    ["th", " "],
+                    ["th", " "],
+                    ["th", " "],
+                    ["th", ["strong", t_expenses.toFixed(2)]],
+                    ["th", ["strong", t_takings.toFixed(2)]],
+                    ["th", ["strong", t_diff.toFixed(2)]],
+                    ["th", ["strong", t_profit.toFixed(2)]],
+                    ["th", " "]
+                ]
+            ]
+        ]];
+    }
+}
+
+export class ProductsPurchaseForm extends Widget {
+    private _products: Product[] = [];
+
+    domAttach(): void {
+        // i am new to this so probably there is some better way to do this
+        let f = new Form(<HTMLFormElement> this.dom.firstChild);
+        f.onSubmit(this.save_form.bind(this));
+        return;
+    }
+
+    save_form(form: Form): void {
+        return;
+    }
+
+    constructor() {
+        super();
+    }
+
+    setProducts(products: Product[]): this {
+        this._products = products;
+        this.update();
+        return this;
+    }
+
+    render(): JsonMLs {
+        return [["form", ["input", {"type": "number", "value": 5}], ["button", {"type": "submit"}, "Save"]]];
+    }
+}
+
+
+export class AdminMenuWidget extends Widget {
+
+    private _user: User;
+
+    readonly sigLogin = new Signal<void>();
+
+    constructor() {
+        super();
+    }
+
+    setUser(user: User): this {
+        this._user = user;
+        return this;
+    }
+
+    onSigLogin(slot: () => void): this {
+        this.sigLogin.connect(slot);
+        return this;
+    }
+
+    render(): JsonMLs {
+        return [
+            ["div.ui.segment.basic",
+                ["div.ui.secondary.pointing.menu",
+                    ["a.item.active", "Admin"],
+                    ["div.right.menu",
+                        ["a.ui.item",
+                            ["span", {click: (e: Event) => this.sigLogin.emit()},
+                                this._user ?
+                                    ["span", {title: `login: ${this._user.login}`},
+                                        this._user.name + (this._user.role === "admin" ? " (admin)" : "")
+                                    ] :
+                                    ["span", {id: "login"}, "Login"]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+    }
+
+}
 export class MenuWidget extends Widget {
 
     private _user: User;

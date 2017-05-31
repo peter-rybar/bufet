@@ -51,28 +51,6 @@ class App extends Widget {
                     this._productsWidget
                 ]
             ],
-            ["div.ui.container",
-                ["div.ui.two.column.stackable.grid",
-                    ["div.column",
-                        ["div.ui.segment.basic",
-                            ["h2", {id: "order"}, "Nákupný Košík"],
-                            this._orderWidget
-                        ]
-                    ],
-                    ["div.column",
-                        ["div.ui.segment.basic",
-                            ["h2", "Sumár"],
-                            this._ordersStatsWidget
-                        ]
-                    ]
-                ]
-            ],
-            ["div.ui.container",
-                ["div.ui.segment.basic",
-                    ["h2", {id: "orders"}, "Objednávky"],
-                    this._ordersWidget
-                ]
-            ],
             ["div.ui.vertical.segment.footer",
                 ["div.ui.container",
                     ["div.ui.segment.basic",
