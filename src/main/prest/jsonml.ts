@@ -1,3 +1,5 @@
+import {Form} from "../prest/form";
+
 export interface Attrs {
     _id?: string;
     _classes?: string[];
@@ -463,6 +465,17 @@ export abstract class Widget implements DomWidget {
         ];
     }
 
+}
+export abstract class FormWidget extends Widget {
+
+    domAttach(): void {
+        // i am new to this so probably there is some better way to do this
+        let f = new Form(<HTMLFormElement> this.dom.firstChild);
+        f.onSubmit(this.save_form.bind(this));
+        return;
+    }
+
+    abstract save_form(form: Form): void;
 }
 
 function onDetach(e: HTMLElement, callback: () => void) {

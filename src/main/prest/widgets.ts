@@ -1,6 +1,6 @@
 import {Signal} from "../prest/signal";
 import {User, Order, OrderItem, Product} from "interfaces";
-import {Widget, JsonMLs} from "../prest/jsonml";
+import {Widget, FormWidget, JsonMLs} from "../prest/jsonml";
 import {Form} from "../prest/form";
 /*
  export class ProductForm extends Widget {
@@ -17,6 +17,7 @@ import {Form} from "../prest/form";
  }
  }
  */
+
 export class ProductsTable extends Widget {
     private _products: Product[] = [];
     /*
@@ -38,7 +39,7 @@ export class ProductsTable extends Widget {
 
     render(): JsonMLs {
         let t_expenses = 0;
-        let t_takings = 0
+        let t_takings = 0;
         let t_diff = 0;
         let t_profit = 0;
 
@@ -101,15 +102,11 @@ export class ProductsTable extends Widget {
     }
 }
 
-export class ProductsPurchaseForm extends Widget {
+
+export class ProductsPurchaseForm extends FormWidget {
+
     private _products: Product[] = [];
 
-    domAttach(): void {
-        // i am new to this so probably there is some better way to do this
-        let f = new Form(<HTMLFormElement> this.dom.firstChild);
-        f.onSubmit(this.save_form.bind(this));
-        return;
-    }
 
     save_form(form: Form): void {
         return;
@@ -126,7 +123,47 @@ export class ProductsPurchaseForm extends Widget {
     }
 
     render(): JsonMLs {
-        return [["form", ["input", {"type": "number", "value": 5}], ["button", {"type": "submit"}, "Save"]]];
+        return [["form.new_product.ui.form",
+            ["div.field",
+                ["label", "Item name"],
+                ["select", {"name": "code_existing"},
+                    ["option", {"value": ""}, "Choose existing"],
+                    ...this._products.map(product => {
+                        return (["option", {"value": product.code}, product.title]);
+                    })
+                ]
+            ],
+            ["div.field",
+                ["label", "Item code"],
+                ["input", {"type": "text", "name": "code", "placeholder": "some_code", "required": true}]
+            ],
+            ["div.field",
+                ["label", "Item name"],
+                ["input", {"type": "text", "name": "title", "placeholder": "some title", "required": true}]
+            ],
+            ["div.field",
+                ["label", "Item description"],
+                ["input", {"type": "text", "name": "description", "placeholder": "some description", "required": true}]
+            ],
+            ["div.field",
+                ["label", "Purchased items"],
+                ["input", {"type": "number", "name": "count", "value": 0, "required": true}]
+            ],
+            ["div.field",
+                ["label", "Unit purchase price"],
+                ["input", {"type": "number", "name": "price_purchase", "value": 0, "required": true}]
+            ],
+            ["div.field",
+                ["label", "Unit selling price"],
+                ["input", {"type": "number", "name": "price_purchase", "value": 0, "required": true}]
+            ],
+            ["div.field",
+                ["label", "Alert for min pieces"],
+                ["input", {"type": "number", "name": "alert_low", "value": 5, "required": true}]
+            ],
+            ["button.ui.button.primary", {"type": "submit"}, "Save"],
+            ["button.ui.button", {"type": "reset"}, "Reset"]
+        ]];
     }
 }
 

@@ -45,13 +45,13 @@ class Admin extends Widget {
             ],
             [
                 "div.ui.container",
-                ["div.ui.basic.segment",
+                ["div.ui.basic.segment.column",
                     ["h1", "Products"],
                     this._productsWidget
                 ]
             ],
             [
-                "div.ui.container",
+                "div.ui.container.four.column.grid",
                 ["div.ui.basic.segment",
                     ["h1", "New purchase"],
                     this._purchaseForm

@@ -1,4 +1,3 @@
-
 var path = require('path');
 var express = require('express');
 var bodyParser = require('body-parser');
@@ -11,7 +10,7 @@ var db = new tingodb.Db(dbdir, {});
 
 var usersCollection = db.collection("users");
 usersCollection.remove({},
-    function(err, res) {
+    function (err, res) {
         if (err) throw err;
         console.log("users remove", res);
     });
@@ -23,7 +22,7 @@ usersCollection.insert(require('./data/users'),
 
 var productsCollection = db.collection("products");
 productsCollection.remove({},
-    function(err, res) {
+    function (err, res) {
         if (err) throw err;
         console.log("products remove", res);
     });
@@ -31,6 +30,30 @@ productsCollection.insert(require('./data/products'),
     function (err, res) {
         if (err) throw err;
         console.log("products insert", res);
+    });
+
+var suppliersCollection = db.collection("suppliers");
+suppliersCollection.remove({},
+    function (err, res) {
+        if (err) throw err;
+        console.log("suppliers remove", res);
+    });
+suppliersCollection.insert(require('./data/suppliers'),
+    function (err, res) {
+        if (err) throw err;
+        console.log("suppliers insert", res);
+    });
+
+var purchaseLogCollection = db.collection("purchase_log");
+purchaseLogCollection.remove({},
+    function (err, res) {
+        if (err) throw err;
+        console.log("purchase log remove", res);
+    });
+purchaseLogCollection.insert(require('./data/purchase_log'),
+    function (err, res) {
+        if (err) throw err;
+        console.log("purchase log insert", res);
     });
 
 
@@ -65,6 +88,27 @@ var authBasic = basicAuth({
     challenge: true,
     realm: 'Imb4T3st4pp'
 });
+
+/*it will be much more niec to extend basic object*/
+
+var authAdminBasic = basicAuth({
+    authorizeAsync: true,
+    authorizer: function (username, password, cb) {
+        db.collection("users").findOne({login: username, role: "admin"},
+            function (err, user) {
+                if (err) {
+                    console.error(err);
+                    cb(null, false);
+                } else {
+                    var auth = user && user.password === password;
+                    console.log("auth: ", username, password, user);
+                    cb(null, auth);
+                }
+            });
+    },
+    challenge: true,
+    realm: 'Imb4T3st4pp'
+});
 // app.use(authBasic);
 
 
@@ -72,11 +116,6 @@ app.get('/', function (req, res) {
     console.log('get', req.params, req.query);
     res.sendFile(path.join(__dirname + '/../static/index.html'));
 });
-
-// app.get('/', function (req, res) {
-//     console.log('req', req.params, req.query);
-//     res.send('Hello World!')
-// });
 
 app.get('/products', function (req, res, next) {
     console.log('products get', req.params, req.query);
@@ -228,6 +267,40 @@ app.post('/jserr', jsonParser, function (req, res) {
     res.send("");
 });
 
+/*lets create admin route and use admin auth*/
+
+app.get('/admin', authAdminBasic, function (req, res, next) {
+    console.log('admin');
+    if (req.auth) {
+        console.log('get', req.params, req.query);
+        res.sendFile(path.join(__dirname + '/../static/admin.html'));
+    }
+    else {
+        res.sendStatus(404);
+    }
+});
+app.get('/admin/user', authAdminBasic, function (req, res, next) {
+    console.log('user get', req.params, req.query);
+    if (req.auth) {
+        db.collection("users").findOne({login: req.auth.user, role: "admin"},
+            function (err, user) {
+                if (err) return next(err);
+                if (user) {
+                    res.json({
+                        user: {
+                            login: user.login,
+                            name: user.name,
+                            role: user.role
+                        }
+                    });
+                } else {
+                    res.sendStatus(404); // Not Found
+                }
+            });
+    } else {
+        res.sendStatus(404); // Not Found
+    }
+});
 
 app.use(express.static(path.join(__dirname, '../static')));
 app.use('/node_modules', express.static(path.join(__dirname, '../node_modules')));

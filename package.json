@@ -12,7 +12,7 @@
   "main": "index.js",
   "scripts": {
     "tslint": "tslint --project tsconfig.json --type-check",
-    "build": "tsc",
+    "build": "./node_modules/.bin/tsc",
     "build:watch": "npm run build -- -w",
     "predist": "npm run clean && npm run tslint && npm run build && npm run test",
     "dist": "rollup -c",
@@ -26,12 +26,6 @@
     "server:pm2": "NODE_ENV=production pm2 start server/app.js -i 0 --name bufet",
     "pm2": "NODE_ENV=production pm2"
   },
-  "pre-commit": [
-    "dist"
-  ],
-  "pre-push": [
-    "dist"
-  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/peter-rybar/bufet.git"

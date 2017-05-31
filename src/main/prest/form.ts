@@ -1,7 +1,6 @@
-
 export interface Entry {
     getName(): string;
-    getValue(): string;
+    getValue(): any;
     setValue(value: string): this;
     validate(locale?: string): string;
     setValidator(validator: (entry: Entry, locale?: string) => string): this;
@@ -72,7 +71,7 @@ export class TextInputEntry implements Entry {
     private _validator: (entry: Entry, locale: string) => string;
     private _onChange: (entry: Entry, final: boolean) => void;
 
-    constructor(element: HTMLInputElement|string) {
+    constructor(element: HTMLInputElement | string) {
         if (typeof element === "string") {
             this._element = document.getElementById(element) as HTMLInputElement;
         } else {
@@ -150,8 +149,8 @@ export class NumberInputEntry implements Entry {
         return this._element.name;
     }
 
-    getValue(): string {
-        return this._element.value;
+    getValue(): number {
+        return +this._element.value;
     }
 
     setValue(value: string): this {
@@ -369,7 +368,7 @@ export class SelectEntry implements Entry {
         return this;
     }
 
-    setOptions(options: {value: string, text: string}[]): this {
+    setOptions(options: { value: string, text: string }[]): this {
         const e = this._element;
         while (e.options.length > 0) {
             e.remove(0);
@@ -559,6 +558,24 @@ export class Form {
             this._element = document.getElementById(element) as HTMLFormElement;
         } else {
             this._element = element;
+        }
+        /**
+         * add existing items in form as entries
+         */
+        let inputs = this._element.getElementsByTagName("input");
+        /**
+         * oke these are just some basic nodes used in this app
+         */
+        for (let i in inputs) {
+            let inp = inputs[i];
+            switch (inp.type) {
+                case "text":
+                    this.addEntry(new TextInputEntry(<HTMLInputElement> inp));
+                    break;
+                case "number":
+                    this.addEntry(new NumberInputEntry(<HTMLInputElement> inp));
+                    break;
+            }
         }
         this._element.onsubmit = (e) => {
             e.preventDefault();
