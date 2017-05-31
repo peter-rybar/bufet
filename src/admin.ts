@@ -1,26 +1,12 @@
+/*
 import {http} from "./prest/http";
 import {Signal} from "./prest/signal";
 import {Widget, JsonMLs} from "./prest/jsonml";
-import {User, Order} from "./prest/interfaces";
-import {MenuWidget, ProductsWidget, OrdersWidget, OrdersStatsWidget, OrderWidget} from "./prest/widgets";
+
 export const version: string = "@VERSION@";
 
 
-window.onerror = function (message, source, lineno, colno, error) {
-    http.post("jserr")
-        .send({
-            source: source,
-            message: message,
-            lineno: lineno,
-            colno: colno,
-            error: error,
-            error_stack: (<any>error).stack
-        });
-};
-
-
-class App extends Widget {
-
+class Admin extends Widget {
     private _menuWidget: MenuWidget;
     private _productsWidget: ProductsWidget;
     private _orderWidget: OrderWidget;
@@ -30,15 +16,6 @@ class App extends Widget {
     private _user: User;
 
     readonly sigUser = new Signal<User>();
-
-    constructor() {
-        super();
-        this._initMenu();
-        this._initProducts();
-        this._initOrder();
-        this._initOrdersStat();
-        this._initOrders();
-    }
 
     render(): JsonMLs {
         return [
@@ -170,6 +147,8 @@ class App extends Widget {
         this._ordersWidget = new OrdersWidget();
         this.sigUser.connect(user => this._updateOrders());
     }
-
 }
-new App().mount(document.getElementById("app"));
+*/
+/*
+new Admin().mount(document.getElementById("admin"));
+*/
