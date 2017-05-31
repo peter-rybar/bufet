@@ -466,26 +466,6 @@ export class RadioEntry implements Entry {
 
 }
 
-
-/*
- var fileInput = document.getElementById('fileInput');
- var fileDisplayArea = document.getElementById('fileDisplayArea');
-
- fileInput.addEventListener('change', function(e) {
- var file = fileInput.files[0];
- var textType = /text.*!/;
-
- if (file.type.match(textType)) {
- var reader = new FileReader();
- reader.onload = function (e) {
- fileDisplayArea.innerText = reader.result;
- }
- reader.readAsText(file);
- } else {
- fileDisplayArea.innerText = "File not supported!"
- }
- });
- */
 export class FileEntry implements Entry {
 
     private _element: HTMLInputElement;
@@ -576,6 +556,11 @@ export class Form {
                     this.addEntry(new NumberInputEntry(<HTMLInputElement> inp));
                     break;
             }
+        }
+        let selects = this._element.getElementsByTagName("select");
+        for (let i in selects) {
+            let sel = selects[i];
+            this.addEntry(new SelectEntry(<HTMLSelectElement> sel));
         }
         this._element.onsubmit = (e) => {
             e.preventDefault();

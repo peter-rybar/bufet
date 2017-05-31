@@ -3,7 +3,7 @@ import {User, Order, OrderItem, Product} from "interfaces";
 import {Widget, FormWidget, JsonMLs} from "../prest/jsonml";
 import {Form} from "../prest/form";
 /*
- export class ProductForm extends Widget {
+ export class ProductTableItem extends FormWidget {
  private _product: Product = null;
 
  setProduct(product: Product): this {
@@ -21,14 +21,14 @@ import {Form} from "../prest/form";
 export class ProductsTable extends Widget {
     private _products: Product[] = [];
     /*
-     private _productForms: ProductForm[] = [];
+     private _productForms: ProductTableItem[] = [];
      */
 
     setProducts(products: Product[]): this {
         this._products = products;
         /*
          for (let p in products) {
-         let f = new ProductForm();
+         let f = new ProductTableItem();
          f.setProduct(products[p]);
          this._productForms[p] = f;
          }
@@ -55,10 +55,14 @@ export class ProductsTable extends Widget {
                     ["th", "Takings"],
                     ["th", "Expenses vs Takings"],
                     ["th", "Profit"],
-                    ["th", " "]
+                    ["th", "Here be dragons (quick add form)"]
                 ]
             ],
             ["tbody",
+                /**
+                 * this is not nice, need to code ProductTableItem
+                 * and there will be quick form for adding existing item as well
+                 */
                 ...this._products.map(product => {
                     let expenses = (product.sold + product.count) * product.price_purchase;
                     let takings = product.sold * product.price;
