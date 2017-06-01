@@ -440,6 +440,15 @@ export abstract class Widget implements DomWidget {
         const e = this.dom;
         if (e) {
             patchAll(e, this.render(), this);
+            if ((this as any).domAttach) {
+                (this as any).domAttach();
+            }
+            onDetach(e, () => {
+                (this as any).dom = undefined;
+                if ((this as any).domDetach) {
+                    (this as any).domDetach();
+                }
+            });
         }
         return this;
     }
@@ -467,13 +476,9 @@ export abstract class Widget implements DomWidget {
 
 }
 export abstract class FormWidget extends Widget {
+    domAttach = this.attachForms.bind(this);
 
-    domAttach(): void {
-        // i am new to this so probably there is some better way to do this
-        let f = new Form(<HTMLFormElement> this.dom.firstChild);
-        f.onSubmit(this.save_form.bind(this));
-        return;
-    }
+    abstract attachForms(): void;
 
     abstract save_form(form: Form): void;
 }

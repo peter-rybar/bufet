@@ -546,21 +546,26 @@ export class Form {
         /**
          * oke these are just some basic nodes used in this app
          */
-        for (let i in inputs) {
-            let inp = inputs[i];
-            switch (inp.type) {
-                case "text":
-                    this.addEntry(new TextInputEntry(<HTMLInputElement> inp));
-                    break;
-                case "number":
-                    this.addEntry(new NumberInputEntry(<HTMLInputElement> inp));
-                    break;
+        if (inputs.length > 0) {
+            for (let i = 0; i < inputs.length; i++) {
+                let inp = inputs[i];
+                switch (inp.type) {
+                    case "text":
+                    case "hidden":
+                        this.addEntry(new TextInputEntry(<HTMLInputElement> inp));
+                        break;
+                    case "number":
+                        this.addEntry(new NumberInputEntry(<HTMLInputElement> inp));
+                        break;
+                }
             }
         }
         let selects = this._element.getElementsByTagName("select");
-        for (let i in selects) {
-            let sel = selects[i];
-            this.addEntry(new SelectEntry(<HTMLSelectElement> sel));
+        if (selects.length > 0) {
+            for (let i = 0; i < selects.length; i++) {
+                let sel = selects[i];
+                this.addEntry(new SelectEntry(<HTMLSelectElement> sel));
+            }
         }
         this._element.onsubmit = (e) => {
             e.preventDefault();

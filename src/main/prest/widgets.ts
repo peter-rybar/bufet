@@ -2,47 +2,61 @@ import {Signal} from "../prest/signal";
 import {User, Order, OrderItem, Product} from "interfaces";
 import {Widget, FormWidget, JsonMLs} from "../prest/jsonml";
 import {Form} from "../prest/form";
-/*
- export class ProductTableItem extends FormWidget {
- private _product: Product = null;
 
- setProduct(product: Product): this {
- this._product = product;
- this.update();
- return this;
- }
 
- render(): JsonMLs {
- return [];
- }
- }
- */
-
-export class ProductsTable extends Widget {
+export class ProductsTable extends FormWidget {
     private _products: Product[] = [];
-    /*
-     private _productForms: ProductTableItem[] = [];
-     */
+    private t_expenses: number = 0;
+    private t_takings: number = 0;
+    private t_diff: number = 0;
+    private t_profit: number = 0;
+
+    attachForms(): void {
+        let forms = this.dom.getElementsByTagName("form");
+        if (forms.length > 0) {
+            for (let i = 0; i < forms.length; i++) {
+                let f = new Form(<HTMLFormElement> forms[i]);
+                f.onSubmit(this.save_form.bind(this));
+            }
+        }
+        return;
+    }
+
+    save_form(form: Form): void {
+        console.log(form.getValues());
+        return;
+    }
+
+    getExpenses(product: Product): number {
+        return (product.sold + product.count) * product.price_purchase;
+    }
+
+    getTakings(product: Product): number {
+        return product.sold * product.price;
+    }
+
+    getDiff(takings: number, expenses: number): number {
+        return (takings - expenses);
+    }
+
+    getProfit(takings: number, product: Product): number {
+        return takings - (product.sold * product.price_purchase);
+    }
 
     setProducts(products: Product[]): this {
+        for (let product of products) {
+            let takings = this.getTakings(product);
+            this.t_expenses += this.getExpenses(product);
+            this.t_takings += takings;
+            this.t_diff += this.getDiff(takings, this.t_expenses);
+            this.t_profit += this.getProfit(takings, product);
+        }
         this._products = products;
-        /*
-         for (let p in products) {
-         let f = new ProductTableItem();
-         f.setProduct(products[p]);
-         this._productForms[p] = f;
-         }
-         */
         this.update();
         return this;
     }
 
     render(): JsonMLs {
-        let t_expenses = 0;
-        let t_takings = 0;
-        let t_diff = 0;
-        let t_profit = 0;
-
         return [["table.products.ui.celled.table",
             ["thead",
                 ["tr",
@@ -59,35 +73,29 @@ export class ProductsTable extends Widget {
                 ]
             ],
             ["tbody",
-                /**
-                 * this is not nice, need to code ProductTableItem
-                 * and there will be quick form for adding existing item as well
-                 */
                 ...this._products.map(product => {
-                    let expenses = (product.sold + product.count) * product.price_purchase;
-                    let takings = product.sold * product.price;
-                    let diff = takings - expenses;
-                    let profit = takings - (product.sold * product.price_purchase);
-                    t_expenses += expenses;
-                    t_takings += takings;
-                    t_diff += diff;
-                    t_profit += profit;
-                    return (
-                        [
-                            "tr" + (product.count === 0 ? ".error" : product.count <= product.alert_low ? ".warning" : ""),
-                            ["td", product.title],
-                            ["td", product.count],
-                            ["td", product.sold],
-                            ["td", product.price_purchase.toFixed(2)],
-                            ["td", product.price.toFixed(2)],
-                            ["td", expenses.toFixed(2)],
-                            ["td", takings.toFixed(2)],
-                            ["td", diff.toFixed(2)],
-                            ["td", profit.toFixed(2)],
-                            ["td", " "]
-                        ]);
-                })
-            ],
+                    let _row_class = (product.count === 0 ? ".error" : product.count <= product.alert_low ? ".warning" : "");
+                    let expenses = this.getExpenses(product);
+                    let takings = this.getTakings(product);
+                    let diff = this.getDiff(takings, expenses);
+                    let profit = this.getProfit(takings, product);
+                    return (["tr" + _row_class,
+                        ["td", product.title],
+                        ["td", product.count],
+                        ["td", product.sold],
+                        ["td", product.price_purchase.toFixed(2)],
+                        ["td", product.price.toFixed(2)],
+                        ["td", expenses.toFixed(2)],
+                        ["td", takings.toFixed(2)],
+                        ["td", diff.toFixed(2)],
+                        ["td", profit.toFixed(2)],
+                        ["td", ["form.new_product.ui.form",
+                            ["input", {"type": "hidden", "name": "code", "value": product.code}],
+                            ["input", {"type": "number", "name": "count", "value": 5, "required": true}],
+                            ["button.ui.button.primary", {"type": "submit"}, "add"]
+                        ]]
+                    ]);
+                })],
             ["tfoot",
                 ["tr",
                     ["th", ["strong", "Summary"]],
@@ -95,14 +103,15 @@ export class ProductsTable extends Widget {
                     ["th", " "],
                     ["th", " "],
                     ["th", " "],
-                    ["th", ["strong", t_expenses.toFixed(2)]],
-                    ["th", ["strong", t_takings.toFixed(2)]],
-                    ["th", ["strong", t_diff.toFixed(2)]],
-                    ["th", ["strong", t_profit.toFixed(2)]],
+                    ["th", ["strong", this.t_expenses.toFixed(2)]],
+                    ["th", ["strong", this.t_takings.toFixed(2)]],
+                    ["th", ["strong", this.t_diff.toFixed(2)]],
+                    ["th", ["strong", this.t_profit.toFixed(2)]],
                     ["th", " "]
                 ]
             ]
-        ]];
+        ]]
+            ;
     }
 }
 
@@ -110,9 +119,19 @@ export class ProductsTable extends Widget {
 export class ProductsPurchaseForm extends FormWidget {
 
     private _products: Product[] = [];
+    private _form: boolean = false;
 
+    attachForms(): void {
+        if (!this._form) {
+            let f = new Form(<HTMLFormElement> this.dom.firstChild);
+            f.onSubmit(this.save_form.bind(this));
+            this._form = true;
+        }
+        return;
+    }
 
     save_form(form: Form): void {
+        console.log(form.getValues());
         return;
     }
 
@@ -281,10 +300,8 @@ export class ProductsWidget extends Widget {
                 ...this._products.map(product => {
                     return (
                         ["div.product.card", {title: `code: ${product.code}`},
-                            // ["div.image", ["img", {src: "img.jpg"}]],
                             ["div.content",
                                 ["div.header", product.title, " "],
-                                // ["div.meta", "novinka"],
                                 ["div.description", product.description]
                             ],
                             ["div.extra",
