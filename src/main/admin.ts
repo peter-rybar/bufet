@@ -96,7 +96,10 @@ class Admin extends Widget {
     }
 
     private _postPurchase(product: Product): void {
-        console.log('new purchase', product);
+        http.post("/products").onResponse(res => {
+                this._getProducts();
+            }
+        ).onError(err => console.error(err)).send(product);
     }
 
     private _initProducts(): void {

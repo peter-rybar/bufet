@@ -36,8 +36,7 @@ export class ProductsTable extends FormWidget {
     }
 
     save_form(form: Form): void {
-        console.log(form.getValues());
-        //this.sigPurchase.emit();
+        this.sigPurchase.emit(form.getValues());
         return;
     }
 
@@ -58,6 +57,10 @@ export class ProductsTable extends FormWidget {
     }
 
     setProducts(products: Product[]): this {
+        this.t_expenses = 0;
+        this.t_takings = 0;
+        this.t_diff = 0;
+        this.t_profit = 0;
         for (let product of products) {
             let takings = this.getTakings(product);
             this.t_expenses += this.getExpenses(product);
