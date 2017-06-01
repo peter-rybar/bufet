@@ -126,6 +126,58 @@ app.get('/products', function (req, res, next) {
         });
 });
 
+app.post('/products', authAdminBasic, jsonParser, function (req, res, next) {
+    console.log("product purchase", req.params, req.query, req.body);
+    /**
+     * use producstPurchaseLog for purchase stats etc
+     */
+    var product = req.body;
+    product.sold = 0;
+    productsCollection.findOne({code: product.code}, function (err, dres) {
+        console.log("find product error:", err);
+        console.log("find product result:", dres);
+        if (err) {
+            console.log(err);
+            res.sendStatus(404); // Not Found
+        }
+        else {
+            if (dres) {
+                console.log("update");
+                var c = dres.count + product.count;
+                console.log(c);
+                console.log(product.code);
+                productsCollection.update({code: product.code}, {$set: {count: c}}, function (err, dres) {
+                    if (err) {
+                        console.log("update failed");
+                        res.sendStatus(500);
+                    }
+                    else {
+                        console.log("updated", dres);
+                        productsCollection.findOne({code: product.code}, function (err, dres) {
+                            console.log(dres);
+                        });
+                        res.sendStatus(200);
+                    }
+                });
+            }
+            else {
+                console.log("new product", product);
+                productsCollection.insert(product, function (err, dres) {
+                    if (err) {
+                        console.log("insert failed");
+                        res.sendStatus(500);
+                    }
+                    else {
+                        console.log("inserted");
+                        console.log(dres);
+                        res.sendStatus(200);
+                    }
+                });
+            }
+        }
+    });
+});
+
 app.get('/product/:code', function (req, res, next) {
     console.log('product get', req.params, req.query);
     db.collection("products").findOne({code: req.params.code},
