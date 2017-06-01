@@ -1,7 +1,7 @@
 import {http} from "./prest/http";
 import {Signal} from "./prest/signal";
 import {Widget, JsonMLs} from "./prest/jsonml";
-import {User} from "./prest/interfaces";
+import {Product, User} from "./prest/interfaces";
 import {AdminMenuWidget, ProductsTable, ProductsPurchaseForm} from "./prest/widgets";
 
 export const version: string = "@VERSION@";
@@ -92,11 +92,15 @@ class Admin extends Widget {
     }
 
     private _initPurchaseForm(): void {
-        this._purchaseForm = new ProductsPurchaseForm();
+        this._purchaseForm = new ProductsPurchaseForm().onSigPurchase(product => this._postPurchase(product));
+    }
+
+    private _postPurchase(product: Product): void {
+        console.log('new purchase', product);
     }
 
     private _initProducts(): void {
-        this._productsWidget = new ProductsTable();
+        this._productsWidget = new ProductsTable().onSigPurchase(product => this._postPurchase(product));
     }
 
     private _getProducts(): void {

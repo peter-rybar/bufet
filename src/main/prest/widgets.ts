@@ -5,25 +5,39 @@ import {Form} from "../prest/form";
 
 
 export class ProductsTable extends FormWidget {
+    readonly sigPurchase = new Signal<Product>();
     private _products: Product[] = [];
     private t_expenses: number = 0;
     private t_takings: number = 0;
     private t_diff: number = 0;
     private t_profit: number = 0;
+    private _forms: boolean[] = [];
 
     attachForms(): void {
         let forms = this.dom.getElementsByTagName("form");
         if (forms.length > 0) {
             for (let i = 0; i < forms.length; i++) {
-                let f = new Form(<HTMLFormElement> forms[i]);
-                f.onSubmit(this.save_form.bind(this));
+                if (!this._forms[i]) {
+                    /**
+                     * assume that products and thus rows in the table are always in the same order, so we are attaching the Form object just for new rows
+                     */
+                    let f = new Form(<HTMLFormElement> forms[i]);
+                    f.onSubmit(this.save_form.bind(this));
+                    this._forms[i] = true;
+                }
             }
         }
         return;
     }
 
+    onSigPurchase(slot: (o: Product) => void): this {
+        this.sigPurchase.connect(slot);
+        return this;
+    }
+
     save_form(form: Form): void {
         console.log(form.getValues());
+        //this.sigPurchase.emit();
         return;
     }
 
@@ -48,9 +62,9 @@ export class ProductsTable extends FormWidget {
             let takings = this.getTakings(product);
             this.t_expenses += this.getExpenses(product);
             this.t_takings += takings;
-            this.t_diff += this.getDiff(takings, this.t_expenses);
             this.t_profit += this.getProfit(takings, product);
         }
+        this.t_diff = this.getDiff(this.t_takings, this.t_expenses);
         this._products = products;
         this.update();
         return this;
@@ -114,10 +128,8 @@ export class ProductsTable extends FormWidget {
             ;
     }
 }
-
-
 export class ProductsPurchaseForm extends FormWidget {
-
+    readonly sigPurchase = new Signal<Product>();
     private _products: Product[] = [];
     private _form: boolean = false;
 
@@ -131,7 +143,7 @@ export class ProductsPurchaseForm extends FormWidget {
     }
 
     save_form(form: Form): void {
-        console.log(form.getValues());
+        this.sigPurchase.emit(form.getValues());
         return;
     }
 
@@ -145,17 +157,13 @@ export class ProductsPurchaseForm extends FormWidget {
         return this;
     }
 
+    onSigPurchase(slot: (o: Product) => void): this {
+        this.sigPurchase.connect(slot);
+        return this;
+    }
+
     render(): JsonMLs {
         return [["form.new_product.ui.form",
-            ["div.field",
-                ["label", "Item name"],
-                ["select", {"name": "code_existing"},
-                    ["option", {"value": ""}, "Choose existing"],
-                    ...this._products.map(product => {
-                        return (["option", {"value": product.code}, product.title]);
-                    })
-                ]
-            ],
             ["div.field",
                 ["label", "Item code"],
                 ["input", {"type": "text", "name": "code", "placeholder": "some_code", "required": true}]
@@ -178,7 +186,7 @@ export class ProductsPurchaseForm extends FormWidget {
             ],
             ["div.field",
                 ["label", "Unit selling price"],
-                ["input", {"type": "number", "name": "price_purchase", "value": 0, "required": true}]
+                ["input", {"type": "number", "name": "price", "value": 0, "required": true}]
             ],
             ["div.field",
                 ["label", "Alert for min pieces"],
