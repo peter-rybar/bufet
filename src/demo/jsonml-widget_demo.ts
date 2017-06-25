@@ -41,7 +41,7 @@ class Hello extends Widget {
 
 class Timer extends Widget {
 
-    private _interval: number;
+    private _interval: NodeJS.Timer;
 
     constructor() {
         super();
