@@ -8,6 +8,8 @@ import { ProductsWidget } from "./widgets/products/products.widget";
 import { OrderWidget } from "./widgets/order/order.widget";
 import { OrdersWidget } from "./widgets/orders/orders.widget";
 import { OrdersStatsWidget } from "./widgets/orders-stats/orders-stats.widget";
+import { AdminWidget } from "./widgets/admin/admin.widget";
+
 import { User } from "./interfaces/user.interface";
 import { Order } from "./interfaces/order.interface";
 
@@ -20,6 +22,7 @@ class App extends Widget {
     private _orderWidget: OrderWidget;
     private _ordersStatsWidget: OrdersStatsWidget;
     private _ordersWidget: OrdersWidget;
+    private _adminWidget: AdminWidget;
 
     private _user: User;
 
@@ -32,6 +35,11 @@ class App extends Widget {
         this._initOrder();
         this._initOrdersStat();
         this._initOrders();
+        this._initAdminWidget();
+    }
+
+    private get isUserAdmin(): boolean {
+        return this._user && this._user.role === "admin";
     }
 
     render(): JsonMLs {
@@ -67,6 +75,12 @@ class App extends Widget {
                     this._ordersWidget
                 ]
             ],
+            this.isUserAdmin ? ["div.ui.container",
+                ["div.ui.basic.segment",
+                    ["h1", { id: "admin" }, "Administrácia"],
+                    this._adminWidget
+                ]
+            ] : [""],
             ["div.ui.vertical.segment.footer",
                 ["div.ui.container",
                     ["div.ui.segment.basic",
@@ -90,6 +104,7 @@ class App extends Widget {
                 const user = res.getJson().user as User;
                 this._user = user;
                 this.sigUser.emit(user);
+                this.update();
             })
             .onError(err => console.error(err))
             .send();
@@ -110,9 +125,20 @@ class App extends Widget {
                     this._login();
                 }
             });
+
+        this._getProducts();
+    }
+
+    private _getProducts(): void {
         http.get("/products")
-            .onResponse(res =>
-                this._productsWidget.setProducts(res.getJson().products).update())
+            .onResponse(res => {
+                const products = res.getJson().products;
+                this._productsWidget.setProducts(products).update();
+
+                if (this._adminWidget) {
+                    this._adminWidget.setProducts(products);
+                }
+            })
             .onError(err => console.error(err))
             .send();
     }
@@ -165,6 +191,37 @@ class App extends Widget {
         this.sigUser.connect(user => this._updateOrders());
     }
 
+    private _initAdminWidget(): void {
+        this._adminWidget = new AdminWidget();
+        this._adminWidget.sigNewProduct.connect(data => this._postNewProduct(data));
+    }
+
+    private _postNewProduct(data: any): void {
+        console.log('save data', data);
+
+        http.post("/product/new")
+            .onResponse(res => {
+                console.log('product new res', res);
+                this._adminWidget.setNewProductFormLoadingState(false);
+
+                if (res.getStatus() !== 200) {
+                    this._adminWidget.setNewProductFormMessage("Chyba", "error");
+                    return;
+                }
+
+                this._getProducts();
+                this._adminWidget.setNewProductFormMessage("Ok", "success");
+            })
+            .onError(err => {
+                console.log('product new err', err);
+
+                this._adminWidget.setNewProductFormLoadingState(false);
+                this._adminWidget.setNewProductFormMessage("Chyba", "error");
+            })
+            .send(data);
+
+        this._adminWidget.setNewProductFormLoadingState(true);
+    }
 }
 
 
