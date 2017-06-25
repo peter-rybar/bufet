@@ -65,6 +65,10 @@ export class HttpResponse {
         return this._xhr.getResponseHeader(header);
     }
 
+    getStatus(): number {
+        return this._xhr.status;
+    }
+
     getBody(): any {
         return this._xhr.response;
     }
