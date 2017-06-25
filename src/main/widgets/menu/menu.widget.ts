@@ -7,18 +7,13 @@ export class MenuWidget extends Widget {
     private _user: User;
 
     readonly sigLogin = new Signal<void>();
-    readonly sigAdmin = new Signal<any>();
 
     constructor() {
         super();
     }
 
-    get isUserAdmin(): boolean {
-        if (!this._user) {
-            return false;
-        }
-
-        return this._user.role === "admin";
+    private get isUserAdmin(): boolean {
+        return this._user && this._user.role === "admin";
     }
 
     setUser(user: User): this {
@@ -38,10 +33,8 @@ export class MenuWidget extends Widget {
                     ["a.item.active", "Bufet"],
                     ["a.item", { href: "#order" }, "Nákupný Košík"],
                     ["a.item", { href: "#orders" }, "Objednávky"],
+                    this.isUserAdmin ? ["a.item", { href: "#admin" }, "Administrácia"] : "",
                     ["div.right.menu",
-                        this.isUserAdmin ? ["a.ui.item",
-                            ["span", "Administration", { click: (e: Event) => this.sigAdmin.emit() }]
-                        ] : "",
                         ["a.ui.item",
                             ["span", { click: (e: Event) => this.sigLogin.emit() },
                                 this._user ?
